@@ -2,10 +2,12 @@ import datetime
 import logging
 import unicodedata
 from itertools import product
+from zoneinfo import ZoneInfo
 
 from django.contrib import messages
 from django.db.models import OuterRef, Subquery
 from django.http import HttpResponseRedirect
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.html import escape, format_html
 from django.utils.safestring import mark_safe
@@ -34,6 +36,7 @@ from tournaments.mixins import (CurrentRoundMixin, DebateDragAndDropMixin,
     TournamentMixin)
 from tournaments.models import Round
 from tournaments.utils import get_side_name
+from users.permissions import Permission
 from utils.misc import reverse_round, reverse_tournament
 from utils.mixins import AdministratorMixin
 from utils.tables import TabbycatTableBuilder
@@ -80,7 +83,7 @@ class BaseDisplayDrawTableView(TournamentMixin, VueTableTemplateView):
     def get_page_subtitle(self):
         if len(self.rounds) == 1 and getattr(self.rounds[0], 'starts_at', None):
             return _("debates start at %(time)s (in %(time_zone)s)") % {
-                     'time': self.rounds[0].starts_at.strftime('%H:%M'),
+                     'time': self.rounds[0].starts_at.astimezone(ZoneInfo(get_current_timezone_name())).strftime('%H:%M'),
                      'time_zone': get_current_timezone_name()}
         elif any(getattr(r, 'starts_at', None) for r in self.rounds):
             return _("start times in time zone: %(time_zone)s") % {'time_zone': get_current_timezone_name()}
@@ -124,7 +127,7 @@ class BaseDisplayDrawTableView(TournamentMixin, VueTableTemplateView):
                     "debate starts at %(time)s",
                     "debates start at %(time)s",
                     debates.count(),
-                ) % {'round_name': r.name, 'time': r.starts_at.strftime('%H:%M')}
+                ) % {'round_name': r.name, 'time': r.starts_at.astimezone(ZoneInfo(get_current_timezone_name())).strftime('%H:%M')}
             else:
                 subtitle = ""
             table = PublicDrawTableBuilder(view=self, sort_key=self.sort_key,
@@ -282,22 +285,22 @@ class BriefingRoomDrawByTeamTableMixin(BriefingRoomDrawTableMixin):
 
 class AdminDrawDisplayForSpecificRoundByVenueView(AdministratorMixin,
         BriefingRoomDrawByVenueTableMixin, BaseDisplayDrawForSpecificRoundTableView):
-    pass
+    view_permission = Permission.VIEW_BRIEFING_DRAW
 
 
 class AdminDrawDisplayForSpecificRoundByTeamView(AdministratorMixin,
         BriefingRoomDrawByTeamTableMixin, BaseDisplayDrawForSpecificRoundTableView):
-    pass
+    view_permission = Permission.VIEW_BRIEFING_DRAW
 
 
 class AdminDrawDisplayForCurrentRoundsByVenueView(AdministratorMixin,
         BriefingRoomDrawByVenueTableMixin, BaseDisplayDrawForCurrentRoundsTableView):
-    pass
+    view_permission = Permission.VIEW_BRIEFING_DRAW
 
 
 class AdminDrawDisplayForCurrentRoundsByTeamView(AdministratorMixin,
         BriefingRoomDrawByTeamTableMixin, BaseDisplayDrawForCurrentRoundsTableView):
-    pass
+    view_permission = Permission.VIEW_BRIEFING_DRAW
 
 
 class AssistantDrawDisplayForSpecificRoundByVenueView(OptionalAssistantTournamentPageMixin,
@@ -376,6 +379,7 @@ class BaseDrawDisplayIndexView(AdminDrawUtilitiesMixin, RoundMixin, TemplateView
 
 class AdminDrawDisplayView(AdministratorMixin, BaseDrawDisplayIndexView):
     template_name = 'draw_display_admin.html'
+    view_permission = True
 
 
 class AssistantDrawDisplayView(CurrentRoundMixin, OptionalAssistantTournamentPageMixin, BaseDrawDisplayIndexView):
@@ -445,6 +449,8 @@ class EmailTeamAssignmentsView(RoundTemplateEmailCreateView):
 class AdminDrawView(RoundMixin, AdministratorMixin, AdminDrawUtilitiesMixin, VueTableTemplateView):
     detailed = False
 
+    view_permission = Permission.VIEW_ADMIN_DRAW
+
     def get_page_title(self):
         round = self.round
         self.page_emoji = '👀'
@@ -503,7 +509,7 @@ class AdminDrawView(RoundMixin, AdministratorMixin, AdminDrawUtilitiesMixin, Vue
             teams = Team.objects.filter(debateteam__debate__round=r)
             metrics = self.tournament.pref('team_standings_precedence')
 
-            if self.tournament.pref('teams_in_debate') == 'two':
+            if self.tournament.pref('teams_in_debate') == 2:
                 pullup_metric = BasePowerPairedDrawGenerator.PULLUP_RESTRICTION_METRICS[self.tournament.pref('draw_pullup_restriction')]
             else:
                 pullup_metric = None
@@ -533,7 +539,7 @@ class AdminDrawView(RoundMixin, AdministratorMixin, AdminDrawUtilitiesMixin, Vue
         r = self.round
         if r.draw_status == Round.Status.NONE:
             return TabbycatTableBuilder(view=self)  # blank
-        elif self.tournament.pref('teams_in_debate') == 'bp' and \
+        elif self.tournament.pref('teams_in_debate') == 4 and \
                 r.draw_status == Round.Status.DRAFT and r.prev is not None and \
                 not r.is_break_round:
             return self.get_bp_position_balance_table()
@@ -606,7 +612,7 @@ class PositionBalanceReportView(RoundMixin, AdministratorMixin, VueTableTemplate
                 return "Unknown"  # don't translate, should never happen
 
     def get_tables(self):
-        if self.tournament.pref('teams_in_debate') != 'bp':
+        if self.tournament.pref('teams_in_debate') != 4:
             logger.warning("Tried to access position balance report for a non-BP tournament")
             return []
         if self.round.prev is None:
@@ -636,7 +642,7 @@ class PositionBalanceReportView(RoundMixin, AdministratorMixin, VueTableTemplate
 
     def get_template_names(self):
         # Show an error page if this isn't a BP tournament or if it's the first round
-        if self.tournament.pref('teams_in_debate') != 'bp':
+        if self.tournament.pref('teams_in_debate') != 4:
             return ['position_balance_nonbp.html']
         elif self.round.prev is None:
             return ['position_balance_round1.html']
@@ -652,11 +658,12 @@ class PositionBalanceReportView(RoundMixin, AdministratorMixin, VueTableTemplate
 
 class DrawStatusEdit(LogActionMixin, AdministratorMixin, RoundMixin, PostOnlyRedirectView):
     round_redirect_pattern_name = 'draw'
+    view_permission = Permission.GENERATE_DEBATE
 
 
 class CreateDrawView(DrawStatusEdit):
-
-    action_log_type = ActionLogEntry.ACTION_TYPE_DRAW_CREATE
+    edit_permission = Permission.GENERATE_DEBATE
+    action_log_type = ActionLogEntry.ActionType.DRAW_CREATE
 
     def post(self, request, *args, **kwargs):
         if self.round.draw_status != Round.Status.NONE:
@@ -709,7 +716,7 @@ class CreateDrawView(DrawStatusEdit):
 
 
 class ConfirmDrawCreationView(DrawStatusEdit):
-    action_log_type = ActionLogEntry.ACTION_TYPE_DRAW_CONFIRM
+    action_log_type = ActionLogEntry.ActionType.DRAW_CONFIRM
 
     def post(self, request, *args, **kwargs):
         if self.round.draw_status != Round.Status.DRAFT:
@@ -726,7 +733,7 @@ class ConfirmDrawCreationView(DrawStatusEdit):
 
 
 class DrawRegenerateView(DrawStatusEdit):
-    action_log_type = ActionLogEntry.ACTION_TYPE_DRAW_REGENERATE
+    action_log_type = ActionLogEntry.ActionType.DRAW_REGENERATE
     round_redirect_pattern_name = 'availability-index'
 
     def post(self, request, *args, **kwargs):
@@ -738,10 +745,12 @@ class DrawRegenerateView(DrawStatusEdit):
 
 class ConfirmDrawRegenerationView(AdministratorMixin, TemplateView):
     template_name = "draw_confirm_regeneration.html"
+    view_permission = Permission.GENERATE_DEBATE
 
 
 class DrawReleaseView(DrawStatusEdit):
-    action_log_type = ActionLogEntry.ACTION_TYPE_DRAW_RELEASE
+    edit_permission = Permission.RELEASE_DRAW
+    action_log_type = ActionLogEntry.ActionType.DRAW_RELEASE
     round_redirect_pattern_name = 'draw-display'
 
     def post(self, request, *args, **kwargs):
@@ -761,7 +770,8 @@ class DrawReleaseView(DrawStatusEdit):
 
 
 class DrawUnreleaseView(DrawStatusEdit):
-    action_log_type = ActionLogEntry.ACTION_TYPE_DRAW_UNRELEASE
+    edit_permission = Permission.UNRELEASE_DRAW
+    action_log_type = ActionLogEntry.ActionType.DRAW_UNRELEASE
     round_redirect_pattern_name = 'draw-display'
 
     def post(self, request, *args, **kwargs):
@@ -777,13 +787,14 @@ class DrawUnreleaseView(DrawStatusEdit):
 
 
 class SetRoundStartTimeView(DrawStatusEdit):
-    action_log_type = ActionLogEntry.ACTION_TYPE_ROUND_START_TIME_SET
+    edit_permission = Permission.EDIT_STARTTIME
+    action_log_type = ActionLogEntry.ActionType.ROUND_START_TIME_SET
     round_redirect_pattern_name = 'draw-display'
 
     def post(self, request, *args, **kwargs):
         time_text = request.POST["start_time"]
         try:
-            time = datetime.datetime.strptime(time_text, "%H:%M").time()
+            time = timezone.make_aware(datetime.datetime.strptime(time_text, "%Y-%m-%dT%H:%M"))
         except ValueError:
             messages.error(request, _("Sorry, \"%(input)s\" isn't a valid time. It must "
                            "be in 24-hour format, with a colon, for "
@@ -828,7 +839,7 @@ class BaseSideAllocationsView(TournamentMixin, VueTableTemplateView):
 
 
 class SideAllocationsView(AdministratorMixin, BaseSideAllocationsView):
-    pass
+    view_permission = Permission.EDIT_ALLOCATESIDES
 
 
 class PublicSideAllocationsView(PublicTournamentPageMixin, BaseSideAllocationsView):
@@ -839,6 +850,7 @@ class EditDebateTeamsView(DebateDragAndDropMixin, AdministratorMixin, TemplateVi
     template_name = "edit_debate_teams.html"
     page_title = gettext_lazy("Edit Matchups")
     prefetch_teams = False # Fetched in full as get_serialised
+    edit_permission = Permission.EDIT_DEBATETEAMS
 
     def get_serialised_allocatable_items(self):
         # TODO: account for shared teams

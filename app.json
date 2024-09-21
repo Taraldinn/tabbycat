@@ -8,14 +8,8 @@
   "addons": [
     "papertrail",
     "rediscloud:30",
-    "heroku-postgresql:mini",
-    {
-      "plan": "heroku-redis:mini",
-      "options": {
-        "maxmemory-policy": "allkeys-lru",
-        "timeout": 1800
-      }
-    }
+    "heroku-postgresql:essential-0",
+    "heroku-redis:mini"
   ],
   "env": {
     "DJANGO_SECRET_KEY": {

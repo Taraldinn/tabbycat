@@ -1,4 +1,5 @@
 """Functions that prefetch data for efficiency."""
+from itertools import groupby
 
 from adjallocation.models import DebateAdjudicator
 from checkins.utils import get_checkins
@@ -6,7 +7,7 @@ from draw.models import DebateTeam
 from tournaments.models import Tournament
 
 from .models import BallotSubmission, SpeakerScore, SpeakerScoreByAdj, TeamScore, TeamScoreByAdj
-from .result import DebateResult
+from .result import DebateResult, is_integer_step
 
 
 def populate_wins(debates):
@@ -89,15 +90,20 @@ def populate_results(ballotsubs, tournament=None):
     if tournament is None:
         tournament = Tournament.objects.get(round__debate__ballotsubmission=ballotsubs[0])
     positions = tournament.positions
-    sides = tournament.sides
     ballotsubs = list(ballotsubs)  # set ballotsubs in stone to avoid race conditions in later queries
 
     results_by_debate_id = {}
     results_by_ballotsub_id = {}
 
+    debateteams = DebateTeam.objects.filter(
+        debate__ballotsubmission__in=ballotsubs,
+    ).select_related('team', 'team__tournament').order_by('debate_id').distinct()
+    nsides_per_debate = {d_id: max(*[dt.side for dt in dts]) + 1 for d_id, dts in groupby(debateteams, key=lambda dt: dt.debate_id)}
+    criteria = tournament.scorecriterion_set.all()
+
     # Create the DebateResults
     for ballotsub in ballotsubs:
-        result = DebateResult(ballotsub, load=False)
+        result = DebateResult(ballotsub, load=False, sides=range(nsides_per_debate.get(ballotsub.debate_id, tournament.pref('teams_in_debate'))), criteria=criteria)
         result.init_blank_buffer()
 
         ballotsub._result = result
@@ -105,11 +111,6 @@ def populate_results(ballotsubs, tournament=None):
         results_by_ballotsub_id[ballotsub.id] = result
 
     # Populate debateteams (load_debateteams)
-    debateteams = DebateTeam.objects.filter(
-        debate__ballotsubmission__in=ballotsubs,
-        side__in=sides,
-    ).select_related('team', 'team__tournament').distinct()
-
     for dt in debateteams:
         for result in results_by_debate_id[dt.debate_id]:
             result.debateteams[dt.side] = dt
@@ -117,9 +118,8 @@ def populate_results(ballotsubs, tournament=None):
     # Populate speaker positions (load_speakers)
     speakerscores = SpeakerScore.objects.filter(
         ballot_submission__in=ballotsubs,
-        debate_team__side__in=sides,
         position__in=positions,
-    ).select_related('speaker', 'speaker__team__tournament', 'debate_team')
+    ).select_related('speaker', 'speaker__team__tournament', 'debate_team').prefetch_related('speakercriterionscore_set__criterion')
 
     for ss in speakerscores:
         result = results_by_ballotsub_id[ss.ballot_submission_id]
@@ -128,11 +128,17 @@ def populate_results(ballotsubs, tournament=None):
             result.ghosts[ss.debate_team.side][ss.position] = ss.ghost
 
             if not result.is_voting:
-                result.set_score(ss.debate_team.side, ss.position, ss.score)
-                result.set_speaker_rank(ss.debate_team.side, ss.position, ss.rank)
+                int_step = is_integer_step(tournament, ss)
+                if len(ss.speakercriterionscore_set.all()) > 0:
+                    for criterion_score in ss.speakercriterionscore_set.all():
+                        score = criterion_score.score
+                        score = int(score) if int_step and int(score) == score else score
+                        result.set_criterion_score(ss.debate_team.side, ss.position, criterion_score.criterion, score)
+                else:
+                    result.set_score(ss.debate_team.side, ss.position, int(ss.score) if int_step and ss.score % 1 == 0 else ss.score)
+                    result.set_speaker_rank(ss.debate_team.side, ss.position, ss.rank)
 
     # Populate scoresheets (load_scoresheets)
-
     debateadjs = DebateAdjudicator.objects.filter(
         debate__ballotsubmission__in=ballotsubs,
     ).exclude(
@@ -143,24 +149,29 @@ def populate_results(ballotsubs, tournament=None):
         for result in results_by_debate_id[da.debate_id]:
             if result.is_voting:
                 result.debateadjs[da.adjudicator] = da
-                result.scoresheets[da.adjudicator] = result.scoresheet_class(positions)
+                result.scoresheets[da.adjudicator] = result.scoresheet_class(positions, sides=range(nsides_per_debate[da.debate_id]), criteria=criteria)
 
     ssbas = SpeakerScoreByAdj.objects.filter(
         ballot_submission__in=ballotsubs,
-        debate_team__side__in=sides,
         position__in=positions,
-    ).select_related('debate_adjudicator__adjudicator__institution', 'debate_team')
+    ).select_related('debate_adjudicator__adjudicator__institution', 'debate_team').prefetch_related('speakercriterionscorebyadj_set__criterion')
 
     for ssba in ssbas:
         result = results_by_ballotsub_id[ssba.ballot_submission_id]
+        int_step = is_integer_step(tournament, ssba)
         if result.uses_speakers and result.is_voting:
-            result.set_score(ssba.debate_adjudicator.adjudicator, ssba.debate_team.side,
-                ssba.position, ssba.score)
+            if len(ssba.speakercriterionscorebyadj_set.all()) > 0:
+                for criterion_score in ssba.speakercriterionscorebyadj_set.all():
+                    score = criterion_score.score
+                    score = int(criterion_score.score) if int_step and criterion_score.score % 1 == 0 else score
+                    result.set_criterion_score(ssba.debate_adjudicator.adjudicator, ssba.debate_team.side, ssba.position, criterion_score.criterion, score)
+            else:
+                result.set_score(ssba.debate_adjudicator.adjudicator, ssba.debate_team.side,
+                    ssba.position, int(ssba.score) if int_step and ssba.score % 1 == 0 else ssba.score)
 
     # Populate advancing (load_advancing)
     teamscores = TeamScore.objects.filter(
         ballot_submission__in=ballotsubs,
-        debate_team__side__in=sides,
     ).select_related('debate_team')
 
     for ts in teamscores:
@@ -171,7 +182,6 @@ def populate_results(ballotsubs, tournament=None):
     # Populate advancing (load_advancing)
     teamscoresbyadj = TeamScoreByAdj.objects.filter(
         ballot_submission__in=ballotsubs,
-        debate_team__side__in=sides,
     ).select_related('debate_team')
 
     for tsba in teamscoresbyadj:
