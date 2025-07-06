@@ -1,0 +1,107 @@
+# DigitalOcean App Platform Configuration - Basic Plan ($10/mo)
+# Optimized for 1 GB RAM | 1 Shared vCPU | 100 GB bandwidth
+# This configuration deploys Tabbycat with external PostgreSQL database
+
+name: tabbycat-debate-basic
+region: nyc
+services:
+  # Main Django Web Application
+  - name: web
+    source_dir: /
+    # Deploy from local directory (no GitHub required)
+    build_command: ./bin/digitalocean-build-basic.sh
+    run_command: python tabbycat/run-asgi.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs  # $10/mo plan
+    routes:
+      - path: /
+    envs:
+      # Database Configuration (REQUIRED - Replace with your database URL)
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: "postgresql://username:password@host:port/database"
+      
+      # Django Configuration (REQUIRED - Generate a real secret key)
+      - key: DJANGO_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "your-super-secret-key-change-this-in-production"
+      
+      - key: DEBUG
+        scope: RUN_TIME
+        value: "0"
+      
+      - key: ON_DIGITALOCEAN
+        scope: RUN_TIME
+        value: "1"
+      
+      - key: ALLOWED_HOSTS
+        scope: RUN_TIME
+        value: "*"
+      
+      - key: PYTHON_VERSION
+        scope: BUILD_TIME
+        value: "3.11"
+      
+      - key: NODE_VERSION
+        scope: BUILD_TIME
+        value: "18"
+      
+      # Optimized for Basic Plan
+      - key: WEB_CONCURRENCY
+        scope: RUN_TIME
+        value: "1"  # Single worker for 1 vCPU
+      
+      - key: TIME_ZONE
+        scope: RUN_TIME
+        value: "UTC"
+      
+      # Security Settings
+      - key: SECURE_SSL_REDIRECT
+        scope: RUN_TIME
+        value: "1"
+      
+      - key: SESSION_COOKIE_SECURE
+        scope: RUN_TIME
+        value: "1"
+      
+      - key: CSRF_COOKIE_SECURE
+        scope: RUN_TIME
+        value: "1"
+
+      # Optional: Tab Director Email for notifications
+      - key: TAB_DIRECTOR_EMAIL
+        scope: RUN_TIME
+        value: "your-email@example.com"
+      
+      # Memory optimization for 1GB RAM
+      - key: GUNICORN_MAX_REQUESTS
+        scope: RUN_TIME
+        value: "1000"
+      
+      - key: GUNICORN_MAX_REQUESTS_JITTER
+        scope: RUN_TIME
+        value: "100"
+      
+      # Cache settings optimized for limited resources
+      - key: PUBLIC_FAST_CACHE_TIMEOUT
+        scope: RUN_TIME
+        value: "300"  # 5 minutes
+      
+      - key: PUBLIC_SLOW_CACHE_TIMEOUT
+        scope: RUN_TIME
+        value: "900"  # 15 minutes
+      
+      - key: TAB_PAGES_CACHE_TIMEOUT
+        scope: RUN_TIME
+        value: "1800"  # 30 minutes
+
+# Note: For the Basic plan, we're not including a separate worker service
+# to conserve resources. The main web service will handle both web requests
+# and background tasks.
+
+static_sites: []
+jobs: []
+workers: []
