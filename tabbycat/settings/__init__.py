@@ -37,11 +37,12 @@ elif os.environ.get('ON_DIGITALOCEAN', ''):
     base_settings.append('digitalocean.py')
     root.info('SPLIT_SETTINGS: imported digitalocean.py')
 else:
-    base_settings.append('local.py')
+    # Try to import local.py but make it optional (may not exist in production)
+    base_settings.append(optional('local.py'))
     if os.environ.get('LOCAL_DEVELOPMENT', ''):
         base_settings.append('development.py')
-        root.info('SPLIT_SETTINGS: imported local.py & development.py')
+        root.info('SPLIT_SETTINGS: imported local.py (optional) & development.py')
     else:
-        root.info('SPLIT_SETTINGS: imported local.py')
+        root.info('SPLIT_SETTINGS: imported local.py (optional)')
 
 include(*base_settings)
