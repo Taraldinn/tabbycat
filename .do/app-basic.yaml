@@ -22,22 +22,22 @@ services:
     envs:
       # Database Configuration (REQUIRED - Replace with your database URL)
       - key: DATABASE_URL
-        scope: RUN_TIME
+        scope: BUILD_AND_RUN_TIME
         type: SECRET
         value: "postgresql://tab:57yqNclrMENfxxJuYmbBJ0u26FdDzOkB@dpg-d1l186h5pdvs73bd0nv0-a.oregon-postgres.render.com/tab_2yw0"
       
       # Django Configuration (REQUIRED - Generate a real secret key)
       - key: DJANGO_SECRET_KEY
-        scope: RUN_TIME
+        scope: BUILD_AND_RUN_TIME
         type: SECRET
         value: "(Eqsk6p%+mtJA5qmIf)W7mLlYkyour-super-secret-key-change-this-in-productionfpBUjm6L5BTlyour-super-secret-key-change-this-in-productionkge)JBXxml"
       
       - key: DEBUG
-        scope: RUN_TIME
+        scope: BUILD_AND_RUN_TIME
         value: "0"
       
       - key: ON_DIGITALOCEAN
-        scope: RUN_TIME
+        scope: BUILD_AND_RUN_TIME
         value: "1"
       
       - key: ALLOWED_HOSTS
