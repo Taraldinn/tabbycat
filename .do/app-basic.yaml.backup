@@ -10,7 +10,7 @@ services:
     source_dir: /
     github:
       repo: Taraldinn/tabbycat
-      branch: master
+      branch: main
       deploy_on_push: true
     build_command: ./bin/digitalocean-build-basic.sh
     run_command: python tabbycat/run-asgi.py
@@ -24,13 +24,13 @@ services:
       - key: DATABASE_URL
         scope: RUN_TIME
         type: SECRET
-        value: "postgresql://tab:57yqNclrMENfxxJuYmbBJ0u26FdDzOkB@dpg-d1l186h5pdvs73bd0nv0-a.oregon-postgres.render.com/tab_2yw0"
+        value: "postgresql://username:password@host:port/database"
       
       # Django Configuration (REQUIRED - Generate a real secret key)
       - key: DJANGO_SECRET_KEY
         scope: RUN_TIME
         type: SECRET
-        value: "(Eqsk6p%+mtJA5qmIf)W7mLlYkyour-super-secret-key-change-this-in-productionfpBUjm6L5BTlyour-super-secret-key-change-this-in-productionkge)JBXxml"
+        value: "your-super-secret-key-change-this-in-production"
       
       - key: DEBUG
         scope: RUN_TIME
@@ -59,7 +59,7 @@ services:
       
       - key: TIME_ZONE
         scope: RUN_TIME
-        value: "Asia/Dhaka"
+        value: "UTC"
       
       # Security Settings
       - key: SECURE_SSL_REDIRECT
@@ -77,7 +77,7 @@ services:
       # Optional: Tab Director Email for notifications
       - key: TAB_DIRECTOR_EMAIL
         scope: RUN_TIME
-        value: "kferdoush617@gmail.com"
+        value: "your-email@example.com"
       
       # Memory optimization for 1GB RAM
       - key: GUNICORN_MAX_REQUESTS
