@@ -61,7 +61,7 @@ ptyprocess==0.7.0
 pyasn1==0.6.0; python_version >= '3.8'
 pyasn1-modules==0.4.0; python_version >= '3.8'
 pycparser==2.22; python_version >= '3.8'
-pygments==2.18.0; python_version >= '3.8'
+pygments==2.19.2; python_version >= '3.8'
 pyopenssl==24.1.0
 pypng==0.20220715.0
 python-ipware==3.0.0; python_version >= '3.7'
