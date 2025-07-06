@@ -20,22 +20,40 @@ services:
     envs:
       # Database Configuration (External PostgreSQL required)
       - key: DATABASE_URL
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
+        type: SECRET
+        value: "postgresql://username:password@host:port/database"
+      
+      - key: DATABASE_URL
+        scope: RUN_TIME
         type: SECRET
         value: "postgresql://username:password@host:port/database"
       
       # Django Configuration
       - key: DJANGO_SECRET_KEY
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
+        type: SECRET
+        value: "your-super-secret-key-change-this-in-production"
+      
+      - key: DJANGO_SECRET_KEY
+        scope: RUN_TIME
         type: SECRET
         value: "your-super-secret-key-change-this-in-production"
       
       - key: DEBUG
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
+        value: "0"
+      
+      - key: DEBUG
+        scope: RUN_TIME
         value: "0"
       
       - key: ON_DIGITALOCEAN
-        scope: BUILD_AND_RUN_TIME
+        scope: BUILD_TIME
+        value: "1"
+      
+      - key: ON_DIGITALOCEAN
+        scope: RUN_TIME
         value: "1"
       
       - key: ALLOWED_HOSTS
