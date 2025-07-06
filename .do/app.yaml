@@ -7,7 +7,7 @@ services:
   - name: web
     source_dir: /
     github:
-      repo: your-username/tabbycat-2.9.3
+      repo: Taraldinn/tabbycat
       branch: main
       deploy_on_push: true
     build_command: ./bin/digitalocean-build-basic.sh

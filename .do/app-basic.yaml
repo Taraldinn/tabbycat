@@ -8,7 +8,10 @@ services:
   # Main Django Web Application
   - name: web
     source_dir: /
-    # Deploy from local directory (no GitHub required)
+    github:
+      repo: Taraldinn/tabbycat
+      branch: main
+      deploy_on_push: true
     build_command: ./bin/digitalocean-build-basic.sh
     run_command: python tabbycat/run-asgi.py
     environment_slug: python
