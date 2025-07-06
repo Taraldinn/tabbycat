@@ -68,7 +68,7 @@ python-ipware==3.0.0; python_version >= '3.7'
 pyyaml==6.0.1; python_version >= '3.6'
 qrcode==7.4.2; python_version >= '3.7'
 redis==5.0.4; python_version >= '3.7'
-referencing==0.35.1; python_version >= '3.8'
+referencing==0.36.2; python_version >= '3.8'
 rpds-py==0.18.0; python_version >= '3.8'
 sentry-sdk==2.0.1; python_version >= '3.6'
 service-identity==24.1.0
