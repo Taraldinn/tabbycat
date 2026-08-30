@@ -21,6 +21,15 @@ from venues.models import Venue
 from .utils import is_staff
 
 
+class TenantHyperlinkedRelatedField(HyperlinkedRelatedField):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        request = self.context.get('request')
+        if request and hasattr(request, 'tenant') and request.tenant:
+            return qs.filter(tenant=request.tenant)
+        return qs
+
+
 class TournamentRelatedFieldMixin:
     default_tournament_field = 'tournament'
 

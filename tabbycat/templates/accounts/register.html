@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Create Your Tournament Portal" %}{% endblock %}
+
+{% block extra-head %}
+<style>
+  .onboarding-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    background: #ffffff;
+  }
+  .step-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #4361ee;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  .plan-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    height: 100%;
+  }
+  .plan-card:hover {
+    border-color: #4361ee;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.15);
+  }
+  .plan-card.selected {
+    border-color: #4361ee;
+    background: #f8faff;
+  }
+  .subdomain-preview {
+    font-family: monospace;
+    color: #4361ee;
+    font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+
+      <div class="text-center mb-5">
+        <h1 class="display-5 font-weight-bold">Create Your Debate Tournament Portal</h1>
+        <p class="lead text-muted">Set up your personal subdomain, choose a plan, and start hosting tournaments in minutes</p>
+      </div>
+
+      <div class="onboarding-card p-4 p-md-5">
+        <form method="post" action="{% url 'accounts:register' %}" id="onboardingForm">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Step 1: Admin Account -->
+          <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+              <span class="step-badge">1</span>
+              <h4 class="font-weight-bold mb-0">Personal Account Details</h4>
+            </div>
+            <p class="text-muted ml-4 pl-3">This account will be the primary owner and platform administrator for your portal.</p>
+
+            <div class="ml-4 pl-3">
+              <div class="row">
+                <div class="col-md-6 form-group">
+                  <label class="font-weight-bold">First Name *</label>
+                  {{ form.first_name }}
+                  {% if form.first_name.errors %}<small class="text-danger">{{ form.first_name.errors.0 }}</small>{% endif %}
+                </div>
+                <div class="col-md-6 form-group">
+                  <label class="font-weight-bold">Last Name *</label>
+                  {{ form.last_name }}
+                  {% if form.last_name.errors %}<small class="text-danger">{{ form.last_name.errors.0 }}</small>{% endif %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group">
+                  <label class="font-weight-bold">Username *</label>
+                  {{ form.username }}
+                  {% if form.username.errors %}<small class="text-danger">{{ form.username.errors.0 }}</small>{% endif %}
+                </div>
+                <div class="col-md-6 form-group">
+                  <label class="font-weight-bold">Email Address *</label>
+                  {{ form.email }}
+                  {% if form.email.errors %}<small class="text-danger">{{ form.email.errors.0 }}</small>{% endif %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12 form-group">
+                  <label class="font-weight-bold">Phone Number (Bangladesh) *</label>
+                  {{ form.phone }}
+                  <small class="form-text text-muted">Used for payment verification & important tournament notifications.</small>
+                  {% if form.phone.errors %}<small class="text-danger">{{ form.phone.errors.0 }}</small>{% endif %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group">
+                  <label class="font-weight-bold">Password *</label>
+                  {{ form.password }}
+                  {% if form.password.errors %}<small class="text-danger">{{ form.password.errors.0 }}</small>{% endif %}
+                </div>
+                <div class="col-md-6 form-group">
+                  <label class="font-weight-bold">Confirm Password *</label>
+                  {{ form.confirm_password }}
+                  {% if form.confirm_password.errors %}<small class="text-danger">{{ form.confirm_password.errors.0 }}</small>{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Step 2: Tenant & Subdomain -->
+          <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+              <span class="step-badge">2</span>
+              <h4 class="font-weight-bold mb-0">Organization & Subdomain</h4>
+            </div>
+            <p class="text-muted ml-4 pl-3">Claim your exclusive URL where participants, adjudicators, and viewers will access your tournaments.</p>
+
+            <div class="ml-4 pl-3">
+              <div class="form-group">
+                <label class="font-weight-bold">Club / Organization Name *</label>
+                {{ form.organization_name }}
+                {% if form.organization_name.errors %}<small class="text-danger">{{ form.organization_name.errors.0 }}</small>{% endif %}
+              </div>
+
+              <div class="form-group">
+                <label class="font-weight-bold">Personal Subdomain *</label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text bg-light">https://</span>
+                  </div>
+                  {{ form.subdomain_slug }}
+                  <div class="input-group-append">
+                    <span class="input-group-text bg-light font-weight-bold">.{{ base_domain }}</span>
+                  </div>
+                </div>
+                <div class="mt-2 text-muted small">
+                  Your tournament portal URL will be: <span class="subdomain-preview" id="slugPreview">https://your-slug.{{ base_domain }}</span>
+                </div>
+                {% if form.subdomain_slug.errors %}<small class="text-danger d-block mt-1">{{ form.subdomain_slug.errors.0 }}</small>{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Step 3: Choose Plan -->
+          <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+              <span class="step-badge">3</span>
+              <h4 class="font-weight-bold mb-0">Select Pricing Plan</h4>
+            </div>
+            <p class="text-muted ml-4 pl-3">Select the package that fits your institution's tournament scale.</p>
+
+            <div class="ml-4 pl-3">
+              <div class="row">
+                {% for plan in plans %}
+                <div class="col-md-4 mb-3">
+                  <label class="w-100 h-100" style="cursor:pointer;">
+                    <div class="plan-card p-3 d-flex flex-column text-center {% if plan.is_featured %}border-primary{% endif %}">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <input type="radio" name="plan" value="{{ plan.id }}" class="plan-radio" {% if forloop.first or preselected_plan_id == plan.id %}checked{% endif %}>
+                        {% if plan.is_featured %}<span class="badge badge-primary">Featured</span>{% endif %}
+                      </div>
+                      <h5 class="font-weight-bold mb-1">{{ plan.name }}</h5>
+                      <h3 class="text-primary font-weight-bold my-2">
+                        {% if plan.price_bdt == 0 %}
+                          Free
+                        {% else %}
+                          ৳{{ plan.price_bdt }}<small class="text-muted fs-6 font-weight-normal">/{{ plan.billing_period }}</small>
+                        {% endif %}
+                      </h3>
+                      <p class="small text-muted mb-3">{{ plan.description|default:"All core tournament features included." }}</p>
+                      
+                      <ul class="list-unstyled text-left small mt-auto text-muted">
+                        <li>✓ <strong>{{ plan.max_tournaments }}</strong> Tournament{{ plan.max_tournaments|pluralize }}</li>
+                        <li>✓ Up to <strong>{{ plan.max_teams_per_tournament }}</strong> Teams</li>
+                        <li>✓ Up to <strong>{{ plan.max_adjudicators_per_tournament }}</strong> Adjudicators</li>
+                        <li>✓ <strong>{{ plan.max_users }}</strong> Manager accounts</li>
+                        {% if plan.custom_domain_allowed %}
+                        <li class="text-success font-weight-bold">✓ Custom Domain Support</li>
+                        {% endif %}
+                      </ul>
+                    </div>
+                  </label>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                  <div class="alert alert-info">Standard free plan will be configured automatically.</div>
+                </div>
+                {% endfor %}
+              </div>
+              {% if form.plan.errors %}<small class="text-danger">{{ form.plan.errors.0 }}</small>{% endif %}
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="text-center mt-5">
+            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 font-weight-bold shadow">
+              <i data-feather="check-circle" class="mr-2"></i> Complete Registration & Launch Portal
+            </button>
+            <p class="text-muted small mt-3">Already have an account? <a href="{% url 'login' %}">Log in here</a></p>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const slugInput = document.getElementById("id_subdomain_slug");
+    const slugPreview = document.getElementById("slugPreview");
+    const baseDomain = "{{ base_domain }}";
+
+    function updatePreview() {
+      const val = (slugInput.value || "your-slug").trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      slugPreview.innerText = "https://" + (val || "your-slug") + "." + baseDomain;
+    }
+
+    if (slugInput) {
+      slugInput.addEventListener("input", updatePreview);
+      updatePreview();
+    }
+
+    // Highlight selected card
+    const radios = document.querySelectorAll(".plan-radio");
+    radios.forEach(radio => {
+      radio.addEventListener("change", function() {
+        document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
+        if (this.checked) {
+          this.closest(".plan-card").classList.add("selected");
+        }
+      });
+      if (radio.checked) {
+        radio.closest(".plan-card").classList.add("selected");
+      }
+    });
+  });
+</script>
+{% endblock %}

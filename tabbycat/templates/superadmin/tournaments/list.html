@@ -1,0 +1,70 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{% trans "Global Tournaments Directory" %}{% endblock %}
+{% block sa-subtitle %}{% trans "All debate tournaments created across all clubs and tenants" %}{% endblock %}
+
+{% block sa-content %}
+<div class="sa-card mb-4">
+  <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+    <form method="get" class="form-inline">
+      <div class="input-group">
+        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search tournament, tenant...">
+        <div class="input-group-append">
+          <button type="submit" class="btn btn-outline-secondary">Search</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="thead-light">
+        <tr>
+          <th>Tournament</th>
+          <th>Tenant / Club</th>
+          <th>Rounds</th>
+          <th>Teams</th>
+          <th>Adjudicators</th>
+          <th>Status</th>
+          <th>Open</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tournaments %}
+        <tr>
+          <td class="font-weight-bold">{{ t.name }}</td>
+          <td>
+            {% if t.tenant %}
+              <a href="{% url 'superadmin:tenant-detail' t.tenant.pk %}">{{ t.tenant.name }}</a>
+              <br><small class="text-muted"><code>{{ t.tenant.slug }}</code></small>
+            {% else %}
+              <span class="text-muted">Standalone / Global</span>
+            {% endif %}
+          </td>
+          <td>{{ t.round_count }}</td>
+          <td>{{ t.team_count }}</td>
+          <td>{{ t.adj_count }}</td>
+          <td>
+            {% if t.active %}
+              <span class="badge badge-soft-success">Active</span>
+            {% else %}
+              <span class="badge badge-soft-secondary">Archived</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="/{{ t.slug }}/" target="_blank" class="btn btn-sm btn-outline-primary">
+              View Tab ↗
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">No tournaments found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -115,12 +115,18 @@ class APIV1RootView(PublicAPIMixin, GenericAPIView):
 )
 class TournamentViewSet(PublicAPIMixin, APILogActionMixin, ModelViewSet):
     # Don't use TournamentAPIMixin here, it's not filtering objects by tournament.
-    queryset = Tournament.objects.all().prefetch_related(
-        'breakcategory_set',
-        Prefetch('round_set',
-            queryset=Round.objects.filter(completed=False).annotate(Count('debate')).order_by('seq'),
-            to_attr='current_round_set'),
-    )
+    serializer_class = serializers.TournamentSerializer
+    
+    def get_queryset(self):
+        qs = Tournament.objects.all().prefetch_related(
+            'breakcategory_set',
+            Prefetch('round_set',
+                queryset=Round.objects.filter(completed=False).annotate(Count('debate')).order_by('seq'),
+                to_attr='current_round_set'),
+        )
+        if hasattr(self.request, 'tenant') and self.request.tenant:
+            return qs.filter(tenant=self.request.tenant)
+        return qs
     serializer_class = serializers.TournamentSerializer
     lookup_field = 'slug'
     lookup_url_kwarg = 'tournament_slug'
@@ -501,6 +507,9 @@ class GlobalInstitutionViewSet(AdministratorAPIMixin, ModelViewSet):
         params.is_valid(raise_exception=True)
 
         filters = Q()
+        if hasattr(self.request, 'tenant') and self.request.tenant:
+            filters &= Q(tenant=self.request.tenant)
+            
         if region := params.validated_data.get('region'):
             filters &= Q(region__name=region.name)
         return Institution.objects.filter(filters).select_related('region').prefetch_related('venue_constraints__category__tournament')

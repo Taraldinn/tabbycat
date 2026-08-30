@@ -24,10 +24,10 @@ class UserPermission(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache.set(PERM_CACHE_KEY % (self.user_id, self.tournament.slug, str(self.permission)), True)
+        cache.set(PERM_CACHE_KEY % (getattr(self.tournament.tenant, 'id', 0) if getattr(self.tournament, 'tenant', None) else 0, self.user_id, self.tournament.slug, str(self.permission)), True)
 
     def delete(self, *args, **kwargs):
-        cache.delete(PERM_CACHE_KEY % (self.user_id, self.tournament.slug, str(self.permission)))
+        cache.delete(PERM_CACHE_KEY % (getattr(self.tournament.tenant, 'id', 0) if getattr(self.tournament, 'tenant', None) else 0, self.user_id, self.tournament.slug, str(self.permission)))
         return super().delete(*args, **kwargs)
 
 
@@ -58,8 +58,8 @@ class Membership(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        cache.set_many({PERM_CACHE_KEY % (self.user_id, self.group.tournament.slug, str(perm)): True for perm in self.group.permissions})
+        cache.set_many({PERM_CACHE_KEY % (getattr(self.group.tournament.tenant, 'id', 0) if getattr(self.group.tournament, 'tenant', None) else 0, self.user_id, self.group.tournament.slug, str(perm)): True for perm in self.group.permissions})
 
     def delete(self, *args, **kwargs):
-        cache.delete_many([PERM_CACHE_KEY % (self.user_id, self.group.tournament.slug, str(perm)) for perm in self.group.permissions])
+        cache.delete_many([PERM_CACHE_KEY % (getattr(self.group.tournament.tenant, 'id', 0) if getattr(self.group.tournament, 'tenant', None) else 0, self.user_id, self.group.tournament.slug, str(perm)) for perm in self.group.permissions])
         return super().delete(*args, **kwargs)

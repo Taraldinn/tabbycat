@@ -70,9 +70,32 @@ class AdministratorMixin(UserPassesTestMixin, ContextMixin):
     def get_edit_permission(self) -> Optional['permission_type']:
         return self.edit_permission
 
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(self.request.get_full_path(), 'login')
+        return super().handle_no_permission()
+
     def test_func(self) -> bool:
+        if not self.request.user.is_authenticated:
+            return False
+
+        if self.request.user.is_superuser or getattr(self.request, 'is_platform_admin', False):
+            return True
+
+        # Check tenant permissions
+        tenant = None
+        if hasattr(self, 'tournament') and getattr(self.tournament, 'tenant', None):
+            tenant = self.tournament.tenant
+        elif hasattr(self.request, 'tenant') and self.request.tenant:
+            tenant = self.request.tenant
+
+        if tenant:
+            if tenant.owner == self.request.user or tenant.memberships.filter(user=self.request.user, role__in=['owner', 'admin']).exists():
+                return True
+
         if not hasattr(self, 'tournament'):
-            return self.request.user.is_superuser
+            return False
 
         view_perm = False
         if self.request.method == 'GET' and self.get_view_permission() is not None:
@@ -81,15 +104,34 @@ class AdministratorMixin(UserPassesTestMixin, ContextMixin):
                 return True
         if (not view_perm or self.request.method in ['POST', 'PUT']) and self.get_edit_permission() is not None:
             return has_permission(self.request.user, self.get_edit_permission(), self.tournament)
-        return self.request.user.is_superuser
+        return False
 
 
 class AssistantMixin(UserPassesTestMixin, ContextMixin):
     """Mixin for views that are for assistants."""
     view_role = "assistant"
 
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(self.request.get_full_path(), 'login')
+        return super().handle_no_permission()
+
     def test_func(self) -> bool:
-        return self.request.user.is_authenticated and (self.request.user.is_staff or not hasattr(self, 'tournament') or self.tournament.pref('assistant_access') != 'none')
+        if not self.request.user.is_authenticated:
+            return False
+
+        if self.request.user.is_superuser or self.request.user.is_staff or getattr(self.request, 'is_platform_admin', False):
+            return True
+
+        tenant = getattr(self, 'tournament', None) and getattr(self.tournament, 'tenant', None)
+        if not tenant and hasattr(self.request, 'tenant') and self.request.tenant:
+            tenant = self.request.tenant
+
+        if tenant and (tenant.owner == self.request.user or tenant.memberships.filter(user=self.request.user).exists()):
+            return True
+
+        return not hasattr(self, 'tournament') or self.tournament.pref('assistant_access') != 'none'
 
     def get_context_data(self, **kwargs):
         kwargs["user_role"] = self.view_role

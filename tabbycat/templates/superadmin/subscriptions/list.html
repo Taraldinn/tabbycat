@@ -1,0 +1,91 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{% trans "Tenant Subscriptions" %}{% endblock %}
+{% block sa-subtitle %}{% trans "Monitor active plans, expiry dates, and billing periods" %}{% endblock %}
+
+{% block sa-content %}
+<div class="sa-card mb-4">
+  <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center">
+    <form method="get" class="form-inline mb-2 mb-md-0">
+      <div class="input-group mr-2">
+        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search tenant, plan...">
+        <div class="input-group-append">
+          <button type="submit" class="btn btn-outline-secondary">Search</button>
+        </div>
+      </div>
+      <select name="status" class="custom-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="thead-light">
+        <tr>
+          <th>Tenant</th>
+          <th>Plan</th>
+          <th>Status</th>
+          <th>Period Start</th>
+          <th>Period End</th>
+          <th>Auto Renew</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in subscriptions %}
+        <tr>
+          <td class="font-weight-bold">
+            <a href="{% url 'superadmin:tenant-detail' sub.tenant.pk %}">{{ sub.tenant.name }}</a>
+          </td>
+          <td>
+            <strong>{{ sub.plan.name }}</strong><br>
+            <small class="text-muted">৳{{ sub.plan.price_bdt }}/{{ sub.plan.billing_period }}</small>
+          </td>
+          <td>
+            {% if sub.status == 'active' %}
+              <span class="badge badge-soft-success">Active</span>
+            {% elif sub.status == 'pending' %}
+              <span class="badge badge-soft-warning">Pending</span>
+            {% elif sub.status == 'trial' %}
+              <span class="badge badge-soft-info">Trial</span>
+            {% else %}
+              <span class="badge badge-soft-danger">{{ sub.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td>{{ sub.current_period_start|date:"M d, Y" }}</td>
+          <td>
+            <strong>{{ sub.current_period_end|date:"M d, Y" }}</strong>
+            {% if sub.is_valid %}
+              <small class="text-success d-block">Valid</small>
+            {% else %}
+              <small class="text-danger d-block">Expired / Inactive</small>
+            {% endif %}
+          </td>
+          <td>
+            {% if sub.auto_renew %}
+              <span class="badge badge-soft-success">Yes</span>
+            {% else %}
+              <span class="badge badge-soft-secondary">No</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'superadmin:subscription-edit' sub.pk %}" class="btn btn-sm btn-outline-primary">
+              <i data-feather="edit-2"></i> Edit
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">No subscriptions found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Features" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="text-center mb-5">
+    <h1 class="display-4 font-weight-bold">Platform Features</h1>
+    <p class="lead text-muted">Everything you need to organize and manage debate tournaments effortlessly</p>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-4">
+      <div class="card h-100 p-3 shadow-sm border-0">
+        <div class="card-body">
+          <h3 class="h4 font-weight-bold text-primary mb-3">⚡ Comprehensive Format Support</h3>
+          <p class="text-muted">Supports British Parliamentary (BP), Australs (3-on-3), and custom two-team or four-team debate tournament setups.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-4">
+      <div class="card h-100 p-3 shadow-sm border-0">
+        <div class="card-body">
+          <h3 class="h4 font-weight-bold text-primary mb-3">🔒 Private URLs & Online Ballots</h3>
+          <p class="text-muted">Adjudicators and teams can receive unique, secure private links for online ballots and real-time score submissions.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-4">
+      <div class="card h-100 p-3 shadow-sm border-0">
+        <div class="card-body">
+          <h3 class="h4 font-weight-bold text-primary mb-3">📊 Advanced Break Calculation</h3>
+          <p class="text-muted">Automatically calculate open and category breaks (e.g. ESL, EFL, Novice) with tiebreak configurations.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-4">
+      <div class="card h-100 p-3 shadow-sm border-0">
+        <div class="card-body">
+          <h3 class="h4 font-weight-bold text-primary mb-3">🏢 Multi-Tenancy & Custom Domains</h3>
+          <p class="text-muted">Run multiple tournaments under dedicated subdomain portals or custom domains with fine-grained role permissions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

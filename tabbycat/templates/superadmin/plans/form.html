@@ -1,0 +1,133 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}
+  {% if object %}{% trans "Edit Plan" %} - {{ object.name }}{% else %}{% trans "Create Pricing Plan" %}{% endif %}
+{% endblock %}
+{% block sa-subtitle %}{% trans "Set price in BDT, billing cycle, quotas, and feature flags" %}{% endblock %}
+
+{% block sa-content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="sa-card p-4 p-md-5">
+      <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <h5 class="font-weight-bold mb-3 text-primary">Plan Details</h5>
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Plan Name *</label>
+            {{ form.name }}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Slug *</label>
+            {{ form.slug }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="font-weight-bold">Description</label>
+          {{ form.description }}
+        </div>
+
+        <div class="row">
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Price (BDT) *</label>
+            {{ form.price_bdt }}
+            <small class="text-muted">Set 0 for free plan</small>
+          </div>
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Billing Period *</label>
+            {{ form.billing_period }}
+          </div>
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Display Order</label>
+            {{ form.display_order }}
+          </div>
+        </div>
+
+        <div class="row my-3">
+          <div class="col-md-6">
+            <div class="custom-control custom-checkbox">
+              {{ form.is_active }}
+              <label class="custom-control-label font-weight-bold" for="{{ form.is_active.id_for_label }}">Plan is Active (visible to users)</label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="custom-control custom-checkbox">
+              {{ form.is_featured }}
+              <label class="custom-control-label font-weight-bold" for="{{ form.is_featured.id_for_label }}">Feature Badge Highlight</label>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h5 class="font-weight-bold mb-3 text-primary">Resource Limits</h5>
+        <div class="row">
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Max Tournaments</label>
+            {{ form.max_tournaments }}
+          </div>
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Max Teams per Tourn</label>
+            {{ form.max_teams_per_tournament }}
+          </div>
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Max Adjudicators per Tourn</label>
+            {{ form.max_adjudicators_per_tournament }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Max Manager Accounts</label>
+            {{ form.max_users }}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Max Storage (MB)</label>
+            {{ form.max_storage_mb }}
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h5 class="font-weight-bold mb-3 text-primary">Feature Flags</h5>
+        <div class="row">
+          <div class="col-md-4 mb-2">
+            <div class="custom-control custom-checkbox">
+              {{ form.custom_domain_allowed }}
+              <label class="custom-control-label" for="{{ form.custom_domain_allowed.id_for_label }}">Custom Domain Allowed</label>
+            </div>
+          </div>
+          <div class="col-md-4 mb-2">
+            <div class="custom-control custom-checkbox">
+              {{ form.priority_support }}
+              <label class="custom-control-label" for="{{ form.priority_support.id_for_label }}">Priority Support</label>
+            </div>
+          </div>
+          <div class="col-md-4 mb-2">
+            <div class="custom-control custom-checkbox">
+              {{ form.api_access }}
+              <label class="custom-control-label" for="{{ form.api_access.id_for_label }}">API Access</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+          <a href="{% url 'superadmin:plan-list' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4 font-weight-bold">Save Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

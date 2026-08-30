@@ -1,0 +1,62 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{% trans "Pricing & Subscription Plans" %}{% endblock %}
+{% block sa-subtitle %}{% trans "Manage customer pricing tiers, quotas, and feature entitlements" %}{% endblock %}
+
+{% block sa-actions %}
+<a href="{% url 'superadmin:plan-create' %}" class="btn btn-primary">
+  <i data-feather="plus"></i> Add New Plan
+</a>
+{% endblock %}
+
+{% block sa-content %}
+<div class="row">
+  {% for plan in plans %}
+  <div class="col-md-4 mb-4">
+    <div class="sa-card p-4 h-100 d-flex flex-column {% if plan.is_featured %}border-primary{% endif %}">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="font-weight-bold mb-0">{{ plan.name }}</h4>
+        <div>
+          {% if plan.is_featured %}<span class="badge badge-primary mr-1">Featured</span>{% endif %}
+          {% if plan.is_active %}<span class="badge badge-soft-success">Active</span>{% else %}<span class="badge badge-soft-danger">Inactive</span>{% endif %}
+        </div>
+      </div>
+
+      <h2 class="text-primary font-weight-bold my-2">৳{{ plan.price_bdt }}<small class="text-muted fs-6">/{{ plan.billing_period }}</small></h2>
+      <p class="text-muted small">{{ plan.description|default:"Standard debate plan." }}</p>
+
+      <ul class="list-unstyled small mt-2 mb-4 border-top pt-3 text-muted">
+        <li class="py-1">Tournaments Limit: <strong>{{ plan.max_tournaments }}</strong></li>
+        <li class="py-1">Max Teams: <strong>{{ plan.max_teams_per_tournament }}</strong></li>
+        <li class="py-1">Max Adjudicators: <strong>{{ plan.max_adjudicators_per_tournament }}</strong></li>
+        <li class="py-1">Max Users: <strong>{{ plan.max_users }}</strong></li>
+        <li class="py-1">Storage: <strong>{{ plan.max_storage_mb }} MB</strong></li>
+        <li class="py-1">
+          Custom Domain: 
+          {% if plan.custom_domain_allowed %}<span class="text-success font-weight-bold">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}
+        </li>
+      </ul>
+
+      <div class="mt-auto d-flex justify-content-between align-items-center pt-3 border-top">
+        <span class="badge badge-soft-info">{{ plan.sub_count }} subscriber{{ plan.sub_count|pluralize }}</span>
+        <div>
+          <a href="{% url 'superadmin:plan-edit' plan.pk %}" class="btn btn-sm btn-outline-primary mr-1">
+            <i data-feather="edit-2"></i> Edit
+          </a>
+          <a href="{% url 'superadmin:plan-delete' plan.pk %}" class="btn btn-sm btn-outline-danger">
+            <i data-feather="trash-2"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12 text-center py-5 text-muted">
+    <i data-feather="tag" style="width: 48px; height: 48px;" class="mb-2"></i>
+    <p>No pricing plans configured yet.</p>
+    <a href="{% url 'superadmin:plan-create' %}" class="btn btn-primary">Create Your First Plan</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

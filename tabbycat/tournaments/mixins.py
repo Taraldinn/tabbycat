@@ -46,7 +46,7 @@ class TournamentFromUrlMixin:
     (for websocket consumers).
     """
     tournament_slug_url_kwarg = "tournament_slug"
-    tournament_cache_key = "{slug}_object"
+    tournament_cache_key = "t{tenant_id}_{slug}_object"
     tournament_redirect_pattern_name = None
 
     def get_url_kwargs(self):
@@ -60,14 +60,19 @@ class TournamentFromUrlMixin:
 
         # then look in cache,
         slug = self.get_url_kwargs()[self.tournament_slug_url_kwarg]
-        key = self.tournament_cache_key.format(slug=slug)
+        
+        request = getattr(self, 'request', None) or getattr(self, 'scope', {}).get('request', None)
+        tenant_id = getattr(request, 'tenant_id', getattr(getattr(request, 'tenant', None), 'id', 0)) if request else 0
+        
+        key = self.tournament_cache_key.format(tenant_id=tenant_id, slug=slug)
         cached_tournament = cache.get(key)
         if cached_tournament:
             self._tournament_from_url = cached_tournament
             return cached_tournament
 
         # and if it was in neither place, retrieve the object
-        tournament = get_object_or_404(Tournament, slug=slug)
+        tenant = getattr(request, 'tenant', None) if request else None
+        tournament = get_object_or_404(Tournament, slug=slug, tenant=tenant)
         cache.set(key, tournament, None)
         self._tournament_from_url = tournament
         return tournament
@@ -157,7 +162,8 @@ class TournamentWebsocketMixin(TournamentFromUrlMixin):
     def group_name(self):
         if self.group_prefix is None:
             raise ImproperlyConfigured("group_prefix must be specified on subclasses of TournamentWebsocketMixin")
-        return self.group_prefix + '_' + self.tournament.slug
+        tenant_slug = self.tournament.tenant.slug if getattr(self.tournament, 'tenant', None) else 'default'
+        return self.group_prefix + '_' + tenant_slug + '_' + self.tournament.slug
 
     def send_error(self, error, message, original_content):
         # Need to forcibly decode the string (for translations)
@@ -191,7 +197,7 @@ class RoundFromUrlMixin(TournamentFromUrlMixin):
     websocket consumers).
     """
     round_seq_url_kwarg = "round_seq"
-    round_cache_key = "{slug}_{seq}_object"
+    round_cache_key = "t{tenant_id}_{slug}_{seq}_object"
     round_redirect_pattern_name = None
 
     @property
@@ -202,7 +208,11 @@ class RoundFromUrlMixin(TournamentFromUrlMixin):
 
         # then look in cache,
         seq = self.get_url_kwargs()[self.round_seq_url_kwarg]
-        key = self.round_cache_key.format(slug=self.tournament.slug, seq=seq)
+        
+        request = getattr(self, 'request', None) or getattr(self, 'scope', {}).get('request', None)
+        tenant_id = getattr(request, 'tenant_id', getattr(getattr(request, 'tenant', None), 'id', 0)) if request else 0
+        
+        key = self.round_cache_key.format(tenant_id=tenant_id, slug=self.tournament.slug, seq=seq)
         cached_round = cache.get(key)
         if cached_round:
             self._round_from_url = cached_round

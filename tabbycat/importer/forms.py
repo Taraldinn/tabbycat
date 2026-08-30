@@ -177,6 +177,8 @@ class BaseInstitutionObjectDetailsForm(BaseTournamentObjectDetailsForm):
 
     def __init__(self, tournament, *args, **kwargs):
         super().__init__(tournament, *args, **kwargs)
+        if getattr(tournament, 'tenant', None):
+            self.fields['institution'].queryset = Institution.objects.filter(tenant=tournament.tenant)
 
         # Grab an `institution_for_display` to help render the form. This is
         # not used anywhere in the form logic. First try `initial` (for when

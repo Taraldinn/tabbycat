@@ -59,7 +59,14 @@ urlpatterns = [
         admin.site.urls),
 
     # Accounts
+    path('accounts/', include('accounts.urls')),
     path('accounts/', include('users.urls')),
+
+    # Super Admin Console
+    path('superadmin/', include('superadmin.urls')),
+
+    # Billing
+    path('billing/', include('billing.urls')),
 
     # Notifications
     path('notifications/',
@@ -72,6 +79,9 @@ urlpatterns = [
     # Archive import/export
     path('archive/',
         include('importer.urls_archive')),
+
+    # Landing page (for /pricing, /features, etc)
+    path('', include('landing.urls')),
 
     # Tournament URLs
     path('<slug:tournament_slug>/',

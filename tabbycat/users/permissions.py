@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
     from tournaments.models import Tournament
 
-PERM_CACHE_KEY = "user_%d_%s_%s_permission"
+PERM_CACHE_KEY = "t%d_user_%d_%s_%s_permission"
 
 
 class Permission(TextChoices):
@@ -168,6 +168,11 @@ def has_permission(user: 'settings.AUTH_USER_MODEL', permission: permission_type
     if user.is_superuser:
         return True
 
+    # Check tenant owner / admin access
+    tenant = getattr(tournament, 'tenant', None)
+    if tenant and (tenant.owner == user or tenant.memberships.filter(user=user, role__in=['owner', 'admin']).exists()):
+        return True
+
     if isinstance(permission, bool):
         return permission
 
@@ -180,7 +185,7 @@ def has_permission(user: 'settings.AUTH_USER_MODEL', permission: permission_type
     else:
         user._permissions[tournament.slug] = set()
 
-    cached_perm = cache.get(PERM_CACHE_KEY % (user.pk, tournament.slug, str(permission)))
+    cached_perm = cache.get(PERM_CACHE_KEY % (getattr(tournament.tenant, 'id', 0) if getattr(tournament, 'tenant', None) else 0, user.pk, tournament.slug, str(permission)))
     if cached_perm is not None:
         if cached_perm:
             user._permissions[tournament.slug].add(permission)
@@ -192,7 +197,7 @@ def has_permission(user: 'settings.AUTH_USER_MODEL', permission: permission_type
     )
     if perm:
         user._permissions[tournament.slug].add(permission)
-        cache.set(PERM_CACHE_KEY % (user.pk, tournament.slug, str(permission)), perm)
+        cache.set(PERM_CACHE_KEY % (getattr(tournament.tenant, 'id', 0) if getattr(tournament, 'tenant', None) else 0, user.pk, tournament.slug, str(permission)), perm)
     return perm
 
 

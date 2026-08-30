@@ -1,0 +1,63 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{% trans "Edit Subscription" %} - {{ object.tenant.name }}{% endblock %}
+{% block sa-subtitle %}{% trans "Modify subscription status, plan tier, or period validity" %}{% endblock %}
+
+{% block sa-content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="sa-card p-4 p-md-5">
+      <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="font-weight-bold">Assigned Plan *</label>
+          {{ form.plan }}
+        </div>
+
+        <div class="form-group">
+          <label class="font-weight-bold">Status *</label>
+          {{ form.status }}
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Period Start</label>
+            {{ form.current_period_start }}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Period End</label>
+            {{ form.current_period_end }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="font-weight-bold">Trial Ends At (Optional)</label>
+          {{ form.trial_ends_at }}
+        </div>
+
+        <div class="form-group my-3">
+          <div class="custom-control custom-checkbox">
+            {{ form.auto_renew }}
+            <label class="custom-control-label font-weight-bold" for="{{ form.auto_renew.id_for_label }}">Auto Renew Enabled</label>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+          <a href="{% url 'superadmin:subscription-list' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4 font-weight-bold">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

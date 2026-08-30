@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Subscription & Payment Status" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+
+      <div class="card shadow-sm border-0 mb-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h3 class="font-weight-bold mb-1">{{ tenant.name }}</h3>
+            <p class="text-muted mb-0">Subdomain: <code>http://{{ tenant.slug }}.{{ base_domain }}:8000</code></p>
+          </div>
+          <div>
+            {% if subscription.status == 'active' %}
+              <span class="badge badge-success px-3 py-2 fs-6">Active Plan: {{ subscription.plan.name }}</span>
+            {% elif subscription.status == 'pending' %}
+              <span class="badge badge-warning px-3 py-2 fs-6">Pending Verification</span>
+            {% elif subscription.status == 'trial' %}
+              <span class="badge badge-info px-3 py-2 fs-6">Free Trial</span>
+            {% else %}
+              <span class="badge badge-danger px-3 py-2 fs-6">{{ subscription.get_status_display }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if subscription.status == 'pending' %}
+        <div class="alert alert-warning my-3">
+          <h5 class="font-weight-bold">
+            <i data-feather="clock" class="mr-1"></i> Payment Verification in Progress
+          </h5>
+          <p class="mb-0">
+            We have received your payment submission. An administrator is verifying your transaction ID. Your portal limits and full access will be automatically unlocked upon approval.
+          </p>
+        </div>
+        {% elif subscription.status == 'active' %}
+        <div class="alert alert-success my-3">
+          <h5 class="font-weight-bold">
+            <i data-feather="check-circle" class="mr-1"></i> Subscription is Active!
+          </h5>
+          <p class="mb-0">
+            Your portal has full access until <strong>{{ subscription.current_period_end|date:"F d, Y" }}</strong>.
+          </p>
+        </div>
+        {% endif %}
+
+        <hr class="my-4">
+
+        <h5 class="font-weight-bold mb-3">Payment History</h5>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="thead-light">
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Transaction ID</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for payment in payments %}
+              <tr>
+                <td>{{ payment.created_at|date:"M d, Y H:i" }}</td>
+                <td class="font-weight-bold">৳{{ payment.amount_bdt }}</td>
+                <td>{{ payment.get_method_display }}</td>
+                <td><code>{{ payment.transaction_id|default:"-" }}</code></td>
+                <td>
+                  {% if payment.status == 'verified' %}
+                    <span class="badge badge-success">Verified</span>
+                  {% elif payment.status == 'pending' %}
+                    <span class="badge badge-warning">Pending</span>
+                  {% elif payment.status == 'rejected' %}
+                    <span class="badge badge-danger">Rejected</span>
+                    {% if payment.rejection_reason %}
+                      <small class="d-block text-danger">{{ payment.rejection_reason }}</small>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge badge-secondary">{{ payment.get_status_display }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-3">No payments recorded.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'billing:checkout' subscription.id %}" class="btn btn-outline-primary">
+            <i data-feather="credit-card" class="mr-1"></i> Submit Another Payment
+          </a>
+          <a href="{% url 'tabbycat-index' %}" class="btn btn-primary">
+            Go to Portal Home
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

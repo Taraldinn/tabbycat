@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Tournament)
 def update_tournament_cache(sender, instance, **kwargs):
-    cache.delete("%s_%s" % (instance.slug, 'object'))
+    cache.delete("t%s_%s_%s" % (getattr(instance.tenant, 'id', 0) if getattr(instance, 'tenant', None) else 0, instance.slug, 'object'))
 
 
 @receiver(post_delete, sender=Round)
 @receiver(post_save, sender=Round)
 def update_round_cache(sender, instance, **kwargs):
-    cached_key = "%s_%s_%s" % (instance.tournament.slug, instance.seq, 'object')
+    cached_key = "t%s_%s_%s_%s" % (getattr(instance.tournament.tenant, 'id', 0) if getattr(instance.tournament, 'tenant', None) else 0, instance.tournament.slug, instance.seq, 'object')
     cache.delete(cached_key)
     logger.debug("Cleared cache %s for %s" % (cached_key, instance))
 

@@ -139,8 +139,11 @@ class BaseImportByInstitutionWizardView(BaseImportWizardView):
 
     def get_form_kwargs(self, step):
         if step == 'numbers':
+            institutions = Institution.objects.all()
+            if hasattr(self.request, 'tenant') and self.request.tenant:
+                institutions = institutions.filter(tenant=self.request.tenant)
             return {
-                'institutions': Institution.objects.all(),
+                'institutions': institutions,
             }
         elif step == 'details':
             return {'form_kwargs': {'tournament': self.tournament}}

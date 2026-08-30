@@ -36,6 +36,8 @@ class InstitutionManager(LookupByNameFieldsMixin, models.Manager):
 
 
 class Institution(models.Model):
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE,
+        null=True, verbose_name=_("tenant"))  # null=True during migration only
     name = models.CharField(max_length=100,
         verbose_name=_("name"),
         # Translators: Change the examples to institutions native to your language; keep consistent between strings
@@ -53,10 +55,10 @@ class Institution(models.Model):
     objects = InstitutionManager()
 
     class Meta:
-        constraints = [
-            UniqueConstraint(fields=['name', 'code']),
-        ]
         ordering = ['name']
+        constraints = [
+            UniqueConstraint(fields=['tenant', 'name', 'code'], name='unique_tenant_name_code'),
+        ]
         verbose_name = _("institution")
         verbose_name_plural = _("institutions")
 
@@ -281,11 +283,18 @@ class Team(models.Model):
             UniqueConstraint(fields=['emoji', 'tournament']),
         ]
         indexes = [models.Index(fields=['tournament', 'institution', 'short_reference'])]
-        ordering = ['tournament', 'institution', 'short_reference']
         verbose_name = _("team")
         verbose_name_plural = _("teams")
+        ordering = ['tournament', 'short_name']
 
     objects = TeamManager()
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new and getattr(self, 'tournament', None) and getattr(self.tournament, 'tenant', None):
+            from tenants.limits import TenantLimitEnforcer
+            TenantLimitEnforcer.check_team_limit(self.tournament)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return "[{}] {}".format(self.tournament.slug, self.short_name)
@@ -471,6 +480,13 @@ class Adjudicator(Person):
     class Meta:
         verbose_name = _("adjudicator")
         verbose_name_plural = _("adjudicators")
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new and getattr(self, 'tournament', None) and getattr(self.tournament, 'tenant', None):
+            from tenants.limits import TenantLimitEnforcer
+            TenantLimitEnforcer.check_adjudicator_limit(self.tournament)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         if self.institution is None:

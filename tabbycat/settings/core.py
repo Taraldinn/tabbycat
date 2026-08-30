@@ -109,6 +109,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'tenants.middleware.TenantMiddleware',
     'utils.middleware.DebateMiddleware',
 ]
 
@@ -136,7 +137,15 @@ TABBYCAT_APPS = (
     'notifications',
     'importer',
     'registration',
+    'tenants',
+    'accounts',
+    'billing',
+    'superadmin',
+    'landing',
 )
+
+MULTI_TENANT_MODE = True
+TABBYCAT_BASE_DOMAIN = os.environ.get('TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
 
 INSTALLED_APPS = (
     'daphne',

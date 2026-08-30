@@ -43,20 +43,34 @@ class PublicSiteIndexView(WarnAboutDatabaseUseMixin, WarnAboutLegacySendgridConf
 
     def get(self, request, *args, **kwargs):
         tournaments = Tournament.objects.all()
+        if hasattr(request, 'tenant') and request.tenant:
+            tournaments = tournaments.filter(tenant=request.tenant)
+
         if request.GET.get('redirect', '') == 'false':
             return super().get(request, *args, **kwargs)
-        if tournaments.count() == 1 and not request.user.is_authenticated:
+            
+        is_multi_tenant = getattr(settings, 'MULTI_TENANT_MODE', False)
+        
+        if is_multi_tenant and not getattr(request, 'tenant', None):
+            from landing.views import LandingPageView
+            return LandingPageView.as_view()(request, *args, **kwargs)
+            
+        if tournaments.count() == 1 and not request.user.is_authenticated and not is_multi_tenant:
             logger.debug('One tournament only, user is: %s, redirecting to tournament-public-index', request.user)
             return redirect_tournament('tournament-public-index', tournaments.first())
-        elif not tournaments.exists() and not User.objects.exists():
+        elif not tournaments.exists() and not User.objects.exists() and not is_multi_tenant:
             logger.debug('No users and no tournaments, redirecting to blank-site-start')
             return redirect('blank-site-start')
         else:
             return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        kwargs['tournaments'] = Tournament.objects.filter(active=True)
-        kwargs['inactive'] = Tournament.objects.filter(active=False)
+        tournaments = Tournament.objects.all()
+        if hasattr(self.request, 'tenant') and self.request.tenant:
+            tournaments = tournaments.filter(tenant=self.request.tenant)
+            
+        kwargs['tournaments'] = tournaments.filter(active=True)
+        kwargs['inactive'] = tournaments.filter(active=False)
         return super().get_context_data(**kwargs)
 
 
@@ -241,8 +255,21 @@ class CreateTournamentView(AdministratorMixin, WarnAboutDatabaseUseMixin, Create
         kwargs['preexisting'] = Tournament.objects.filter(slug__in=demo_slugs).values_list('slug', flat=True)
         return super().get_context_data(**kwargs)
 
+    def form_valid(self, form):
+        if getattr(self.request, 'tenant', None):
+            from tenants.limits import TenantLimitEnforcer, TenantLimitExceeded
+            try:
+                TenantLimitEnforcer.check_tournament_limit(self.request.tenant)
+            except TenantLimitExceeded as e:
+                form.add_error(None, str(e))
+                return self.form_invalid(form)
+            form.instance.tenant = self.request.tenant
+
+        self.object = form.save()
+        return redirect(self.get_success_url())
+
     def get_success_url(self):
-        t = Tournament.objects.order_by('id').last()
+        t = getattr(self, 'object', None) or Tournament.objects.order_by('id').last()
         return reverse_tournament('tournament-configure', tournament=t)
 
 

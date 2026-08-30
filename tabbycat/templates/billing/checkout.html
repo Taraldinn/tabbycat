@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Complete Payment" %} - {{ plan.name }}{% endblock %}
+
+{% block extra-head %}
+<style>
+  .payment-method-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+    background: #ffffff;
+  }
+  .payment-badge-bkash { background: #e2136e; color: #fff; }
+  .payment-badge-nagad { background: #f7941d; color: #fff; }
+  .payment-badge-rocket { background: #8c3494; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+
+      <div class="mb-4">
+        <h2 class="font-weight-bold mb-1">Payment & Plan Activation</h2>
+        <p class="text-muted">Complete your transaction using bKash, Nagad, or Rocket to activate <strong>{{ tenant.name }}</strong></p>
+      </div>
+
+      <div class="row">
+        <!-- Order Summary -->
+        <div class="col-md-5 mb-4">
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white py-3">
+              <h5 class="font-weight-bold mb-0">Plan Summary</h5>
+            </div>
+            <div class="card-body">
+              <h4 class="font-weight-bold">{{ plan.name }}</h4>
+              <h2 class="text-primary font-weight-bold my-2">৳{{ plan.price_bdt }} <small class="text-muted fs-6">/{{ plan.billing_period }}</small></h2>
+              <p class="text-muted small">{{ plan.description }}</p>
+
+              <hr>
+
+              <div class="small">
+                <div class="d-flex justify-content-between py-1">
+                  <span class="text-muted">Organization:</span>
+                  <strong>{{ tenant.name }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-1">
+                  <span class="text-muted">Subdomain:</span>
+                  <code>{{ tenant.slug }}.tabbycatbd.com</code>
+                </div>
+                <div class="d-flex justify-content-between py-1">
+                  <span class="text-muted">Tournaments Limit:</span>
+                  <strong>{{ plan.max_tournaments }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-1">
+                  <span class="text-muted">Max Teams/Tournament:</span>
+                  <strong>{{ plan.max_teams_per_tournament }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Instructions Card -->
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-light py-3">
+              <h6 class="font-weight-bold mb-0">Payment Instructions</h6>
+            </div>
+            <div class="card-body small">
+              <div class="mb-3">
+                <span class="badge payment-badge-bkash px-2 py-1 mb-1">bKash (Send Money / Payment)</span>
+                <div>Number: <strong>{{ bkash_number }}</strong></div>
+              </div>
+              <div class="mb-3">
+                <span class="badge payment-badge-nagad px-2 py-1 mb-1">Nagad (Send Money)</span>
+                <div>Number: <strong>{{ nagad_number }}</strong></div>
+              </div>
+              <div class="mb-3">
+                <span class="badge payment-badge-rocket px-2 py-1 mb-1">Rocket</span>
+                <div>Number: <strong>{{ rocket_number }}</strong></div>
+              </div>
+              <p class="text-muted mb-0">
+                1. Send exact amount <strong>৳{{ plan.price_bdt }}</strong>.<br>
+                2. Copy the <strong>Transaction ID (TrxID)</strong> and fill the form on the right.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Verification Form -->
+        <div class="col-md-7 mb-4">
+          <div class="card shadow-sm border-0 p-4">
+            <h5 class="font-weight-bold mb-3">Submit Payment Details</h5>
+            
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <div class="form-group">
+                <label class="font-weight-bold">Payment Method *</label>
+                {{ form.method }}
+                {% if form.method.errors %}<small class="text-danger">{{ form.method.errors.0 }}</small>{% endif %}
+              </div>
+
+              <div class="form-group">
+                <label class="font-weight-bold">Sender Phone Number *</label>
+                {{ form.sender_phone }}
+                <small class="text-muted">The mobile number from which the money was sent.</small>
+                {% if form.sender_phone.errors %}<small class="text-danger d-block">{{ form.sender_phone.errors.0 }}</small>{% endif %}
+              </div>
+
+              <div class="form-group">
+                <label class="font-weight-bold">Transaction ID (TrxID) *</label>
+                {{ form.transaction_id }}
+                <small class="text-muted">The SMS transaction code (e.g. 9B8C7D6E5F).</small>
+                {% if form.transaction_id.errors %}<small class="text-danger d-block">{{ form.transaction_id.errors.0 }}</small>{% endif %}
+              </div>
+
+              <div class="form-group">
+                <label class="font-weight-bold">Payment Screenshot / Receipt (Optional)</label>
+                <div class="custom-file">
+                  {{ form.payment_screenshot }}
+                  <label class="custom-file-label" for="customFile">Choose screenshot image...</label>
+                </div>
+                {% if form.payment_screenshot.errors %}<small class="text-danger d-block">{{ form.payment_screenshot.errors.0 }}</small>{% endif %}
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block btn-lg font-weight-bold mt-4">
+                <i data-feather="send" class="mr-1"></i> Submit Payment for Verification
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

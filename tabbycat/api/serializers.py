@@ -602,13 +602,13 @@ class AdjudicatorSerializer(serializers.ModelSerializer):
 
     url = fields.TournamentHyperlinkedIdentityField(view_name='api-adjudicator-detail')
     name = fields.AnonymisingParticipantNameField()
-    institution = serializers.HyperlinkedRelatedField(
+    institution = fields.TenantHyperlinkedRelatedField(
         allow_null=True,
         view_name='api-global-institution-detail',
         queryset=Institution.objects.all(),
     )
 
-    institution_conflicts = serializers.HyperlinkedRelatedField(
+    institution_conflicts = fields.TenantHyperlinkedRelatedField(
         many=True,
         view_name='api-global-institution-detail',
         queryset=Institution.objects.all(),
@@ -740,7 +740,7 @@ class TeamSerializer(serializers.ModelSerializer):
             exclude = ('team',)
 
     url = fields.TournamentHyperlinkedIdentityField(view_name='api-team-detail')
-    institution = serializers.HyperlinkedRelatedField(
+    institution = fields.TenantHyperlinkedRelatedField(
         allow_null=True,
         view_name='api-global-institution-detail',
         queryset=Institution.objects.all(),
@@ -753,7 +753,7 @@ class TeamSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    institution_conflicts = serializers.HyperlinkedRelatedField(
+    institution_conflicts = fields.TenantHyperlinkedRelatedField(
         many=True,
         view_name='api-global-institution-detail',
         queryset=Institution.objects.all(),

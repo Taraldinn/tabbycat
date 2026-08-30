@@ -1,0 +1,136 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{% trans "Payment Review & Verification" %}{% endblock %}
+{% block sa-subtitle %}Payment for {{ payment.subscription.tenant.name }} (৳{{ payment.amount_bdt }}){% endblock %}
+
+{% block sa-content %}
+<div class="row">
+  <!-- Payment Details & Proof -->
+  <div class="col-md-7 mb-4">
+    <div class="sa-card p-4 mb-4">
+      <h5 class="font-weight-bold mb-3">Transaction Details</h5>
+      
+      <table class="table table-bordered">
+        <tbody>
+          <tr>
+            <th class="bg-light" style="width: 35%;">Tenant / Club</th>
+            <td class="font-weight-bold">
+              <a href="{% url 'superadmin:tenant-detail' payment.subscription.tenant.pk %}">
+                {{ payment.subscription.tenant.name }}
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <th class="bg-light">Subscribed Plan</th>
+            <td>{{ payment.subscription.plan.name }} (৳{{ payment.subscription.plan.price_bdt }}/{{ payment.subscription.plan.billing_period }})</td>
+          </tr>
+          <tr>
+            <th class="bg-light">Amount</th>
+            <td class="text-success font-weight-bold fs-5">৳{{ payment.amount_bdt }}</td>
+          </tr>
+          <tr>
+            <th class="bg-light">Payment Method</th>
+            <td><span class="badge badge-soft-primary fs-6">{{ payment.get_method_display }}</span></td>
+          </tr>
+          <tr>
+            <th class="bg-light">Sender Phone</th>
+            <td class="font-weight-bold">{{ payment.sender_phone|default:"Not specified" }}</td>
+          </tr>
+          <tr>
+            <th class="bg-light">Transaction ID (TrxID)</th>
+            <td><code class="fs-6">{{ payment.transaction_id|default:"Not specified" }}</code></td>
+          </tr>
+          <tr>
+            <th class="bg-light">Submitted At</th>
+            <td>{{ payment.created_at|date:"F d, Y H:i:s" }}</td>
+          </tr>
+          <tr>
+            <th class="bg-light">Status</th>
+            <td>
+              {% if payment.status == 'verified' %}
+                <span class="badge badge-success px-3 py-1">Verified</span>
+              {% elif payment.status == 'pending' %}
+                <span class="badge badge-warning px-3 py-1">Pending Verification</span>
+              {% elif payment.status == 'rejected' %}
+                <span class="badge badge-danger px-3 py-1">Rejected</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% if payment.verified_by %}
+          <tr>
+            <th class="bg-light">Processed By</th>
+            <td>{{ payment.verified_by.username }} on {{ payment.verified_at|date:"M d, Y H:i" }}</td>
+          </tr>
+          {% endif %}
+          {% if payment.rejection_reason %}
+          <tr>
+            <th class="bg-light text-danger">Rejection Reason</th>
+            <td class="text-danger">{{ payment.rejection_reason }}</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Screenshot Image -->
+    {% if payment.payment_screenshot %}
+    <div class="sa-card p-4">
+      <h5 class="font-weight-bold mb-3">Proof Screenshot</h5>
+      <a href="{{ payment.payment_screenshot.url }}" target="_blank">
+        <img src="{{ payment.payment_screenshot.url }}" alt="Screenshot" class="img-fluid rounded border">
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Verification Actions -->
+  <div class="col-md-5 mb-4">
+    <!-- Approve Box -->
+    <div class="sa-card p-4 mb-4 border-success">
+      <h5 class="font-weight-bold text-success mb-2">
+        <i data-feather="check-circle" class="mr-1"></i> Approve & Activate
+      </h5>
+      <p class="small text-muted mb-3">
+        Verifying this payment will automatically mark the tenant subscription as <strong>Active</strong>, calculate validity period, and propagate limits to the tenant.
+      </p>
+
+      <form method="post" action="{% url 'superadmin:payment-verify' payment.pk %}">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="small font-weight-bold">Internal Admin Notes</label>
+          {{ verify_form.admin_notes }}
+        </div>
+        <button type="submit" class="btn btn-success btn-block font-weight-bold py-2" onclick="return confirm('Confirm verification and activate subscription?')">
+          Approve Payment & Activate Plan
+        </button>
+      </form>
+    </div>
+
+    <!-- Reject Box -->
+    <div class="sa-card p-4 border-danger">
+      <h5 class="font-weight-bold text-danger mb-2">
+        <i data-feather="x-circle" class="mr-1"></i> Reject Payment
+      </h5>
+      <p class="small text-muted mb-3">
+        Mark the transaction as invalid (e.g. incorrect transaction ID or insufficient amount).
+      </p>
+
+      <form method="post" action="{% url 'superadmin:payment-reject' payment.pk %}">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="small font-weight-bold">Reason for Rejection *</label>
+          {{ reject_form.rejection_reason }}
+        </div>
+        <div class="form-group">
+          <label class="small font-weight-bold">Admin Notes</label>
+          {{ reject_form.admin_notes }}
+        </div>
+        <button type="submit" class="btn btn-danger btn-block font-weight-bold py-2" onclick="return confirm('Are you sure you want to reject this payment?')">
+          Reject Payment
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

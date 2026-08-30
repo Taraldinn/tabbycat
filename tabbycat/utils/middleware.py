@@ -15,7 +15,8 @@ class DebateMiddleware(object):
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         if 'tournament_slug' in view_kwargs and request.path.split('/')[1] != 'api':
-            cached_key = "%s_%s" % (view_kwargs['tournament_slug'], 'object')
+            tenant_prefix = f"t{getattr(request.tenant, 'id', 0)}_"
+            cached_key = f"{tenant_prefix}{view_kwargs['tournament_slug']}_object"
             cached_tournament_object = cache.get(cached_key)
 
             if cached_tournament_object:
@@ -23,12 +24,13 @@ class DebateMiddleware(object):
             else:
                 request.tournament = get_object_or_404(
                     Tournament,
-                    slug=view_kwargs['tournament_slug'])
+                    slug=view_kwargs['tournament_slug'],
+                    tenant=getattr(request, 'tenant', None)
+                )
                 cache.set(cached_key, request.tournament, None)
 
             if 'round_seq' in view_kwargs:
-                cached_key = "%s_%s_%s" % (view_kwargs['tournament_slug'],
-                                           view_kwargs['round_seq'], 'object')
+                cached_key = f"{tenant_prefix}{view_kwargs['tournament_slug']}_{view_kwargs['round_seq']}_object"
                 cached_round_object = cache.get(cached_key)
                 if cached_round_object:
                     request.round = cached_round_object

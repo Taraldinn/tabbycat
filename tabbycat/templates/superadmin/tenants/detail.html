@@ -1,0 +1,172 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{{ tenant.name }}{% endblock %}
+{% block sa-subtitle %}Subdomain: <code>{{ tenant.slug }}</code> | Owner: {{ tenant.owner.username }}{% endblock %}
+
+{% block sa-actions %}
+<a href="{% url 'superadmin:tenant-edit' tenant.pk %}" class="btn btn-primary mr-2">
+  <i data-feather="edit-2"></i> Edit Tenant
+</a>
+<form method="post" action="{% url 'superadmin:tenant-toggle-active' tenant.pk %}" class="d-inline">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-{% if tenant.is_active %}warning{% else %}success{% endif %}">
+    <i data-feather="{% if tenant.is_active %}pause{% else %}play{% endif %}"></i>
+    {% if tenant.is_active %}Deactivate{% else %}Activate{% endif %}
+  </button>
+</form>
+{% endblock %}
+
+{% block sa-content %}
+<div class="row">
+  <!-- Overview & Limits Card -->
+  <div class="col-md-4 mb-4">
+    <div class="sa-card p-4 mb-4">
+      <h5 class="font-weight-bold mb-3">Tenant Profile</h5>
+      <ul class="list-unstyled small mb-0">
+        <li class="py-2 border-bottom d-flex justify-content-between">
+          <span class="text-muted">Status:</span>
+          {% if tenant.is_active %}
+            <span class="badge badge-soft-success">Active</span>
+          {% else %}
+            <span class="badge badge-soft-danger">Inactive</span>
+          {% endif %}
+        </li>
+        <li class="py-2 border-bottom d-flex justify-content-between">
+          <span class="text-muted">Slug:</span>
+          <code>{{ tenant.slug }}</code>
+        </li>
+        <li class="py-2 border-bottom d-flex justify-content-between">
+          <span class="text-muted">Custom Domain:</span>
+          <strong>{{ tenant.custom_domain|default:"None" }}</strong>
+        </li>
+        <li class="py-2 border-bottom d-flex justify-content-between">
+          <span class="text-muted">Contact Email:</span>
+          <span>{{ tenant.contact_email|default:"-" }}</span>
+        </li>
+        <li class="py-2 border-bottom d-flex justify-content-between">
+          <span class="text-muted">Contact Phone:</span>
+          <span>{{ tenant.contact_phone|default:"-" }}</span>
+        </li>
+        <li class="py-2 d-flex justify-content-between">
+          <span class="text-muted">Created:</span>
+          <span>{{ tenant.created_at|date:"F d, Y" }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Resource Limits -->
+    <div class="sa-card p-4 mb-4">
+      <h5 class="font-weight-bold mb-3">Resource Limits & Usage</h5>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between small mb-1">
+          <span>Tournaments</span>
+          <strong>{{ tournaments_used }} / {{ tenant.max_tournaments }}</strong>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between small mb-1">
+          <span>Manager Accounts</span>
+          <strong>{{ users_used }} / {{ tenant.max_users }}</strong>
+        </div>
+      </div>
+
+      <div class="small text-muted">
+        <div>Max Teams / Tourn: <strong>{{ tenant.max_teams_per_tournament }}</strong></div>
+        <div>Max Adjudicators / Tourn: <strong>{{ tenant.max_adjudicators_per_tournament }}</strong></div>
+        <div>Max Storage: <strong>{{ tenant.max_storage_mb }} MB</strong></div>
+      </div>
+    </div>
+
+    <!-- Subscription Card -->
+    {% if subscription %}
+    <div class="sa-card p-4">
+      <h5 class="font-weight-bold mb-3">Subscription</h5>
+      <div>Plan: <strong>{{ subscription.plan.name }}</strong> (৳{{ subscription.plan.price_bdt }}/{{ subscription.plan.billing_period }})</div>
+      <div>Status: <span class="badge badge-soft-primary">{{ subscription.get_status_display }}</span></div>
+      <div class="small text-muted mt-2">Valid until: {{ subscription.current_period_end|date:"M d, Y" }}</div>
+      <a href="{% url 'superadmin:subscription-edit' subscription.pk %}" class="btn btn-sm btn-outline-primary mt-3">Edit Subscription</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tournaments & Members Column -->
+  <div class="col-md-8 mb-4">
+    <!-- Tournaments -->
+    <div class="sa-card mb-4">
+      <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="font-weight-bold mb-0">Tournaments Hosted</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Name</th>
+              <th>Slug</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tournament in tournaments %}
+            <tr>
+              <td class="font-weight-bold">{{ tournament.name }}</td>
+              <td><code>{{ tournament.slug }}</code></td>
+              <td>
+                {% if tournament.active %}
+                  <span class="badge badge-soft-success">Active</span>
+                {% else %}
+                  <span class="badge badge-soft-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="/{{ tournament.slug }}/" target="_blank" class="btn btn-sm btn-outline-secondary">Open ↗</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-3">No tournaments created under this tenant yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Members -->
+    <div class="sa-card mb-4">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h5 class="font-weight-bold mb-0">Tenant Members</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for membership in memberships %}
+            <tr>
+              <td class="font-weight-bold">{{ membership.user.username }}</td>
+              <td>{{ membership.user.email }}</td>
+              <td><span class="badge badge-soft-primary">{{ membership.get_role_display }}</span></td>
+              <td>{{ membership.joined_at|date:"M d, Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-3">No members.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

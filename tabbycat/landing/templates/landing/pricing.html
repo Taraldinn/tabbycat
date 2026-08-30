@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Pricing Plans" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="text-center mb-5">
+    <h1 class="display-4 font-weight-bold">Plans & Pricing</h1>
+    <p class="lead text-muted">Choose the perfect plan for your debate tournament or institution</p>
+  </div>
+
+  <div class="row justify-content-center">
+    {% for plan in plans %}
+    <div class="col-md-4 mb-4">
+      <div class="card h-100 shadow-sm {% if plan.is_featured %}border-primary{% endif %}">
+        <div class="card-body text-center d-flex flex-column">
+          <h4 class="card-title font-weight-bold">{{ plan.name }}</h4>
+          <h2 class="my-3 text-primary">৳{{ plan.price_bdt }}<small class="text-muted fs-6">/{{ plan.billing_period }}</small></h2>
+          <p class="text-muted">{{ plan.description }}</p>
+          <ul class="list-unstyled text-left mt-3 mb-4 flex-grow-1">
+            <li class="py-1">✓ <strong>{{ plan.max_tournaments }}</strong> Tournaments</li>
+            <li class="py-1">✓ <strong>{{ plan.max_teams_per_tournament }}</strong> Teams per tournament</li>
+            <li class="py-1">✓ <strong>{{ plan.max_adjudicators_per_tournament }}</strong> Adjudicators per tournament</li>
+            <li class="py-1">✓ <strong>{{ plan.max_users }}</strong> Manager accounts</li>
+            <li class="py-1">✓ <strong>{{ plan.max_storage_mb }} MB</strong> Storage</li>
+            {% if plan.custom_domain_allowed %}
+            <li class="py-1">✓ Custom Domain Support</li>
+            {% endif %}
+            {% if plan.priority_support %}
+            <li class="py-1">✓ Priority Support</li>
+            {% endif %}
+          </ul>
+          <a href="{% url 'landing:contact' %}" class="btn {% if plan.is_featured %}btn-primary{% else %}btn-outline-primary{% endif %} btn-block">Choose {{ plan.name }}</a>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+      <div class="alert alert-info">
+        Please contact us for custom plans and tournament pricing.
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

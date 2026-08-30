@@ -1,0 +1,108 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}
+  {% if object %}{% trans "Edit Tenant" %} - {{ object.name }}{% else %}{% trans "Create New Tenant" %}{% endif %}
+{% endblock %}
+{% block sa-subtitle %}{% trans "Configure organizational details, subdomain, owner, and resource quotas" %}{% endblock %}
+
+{% block sa-content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="sa-card p-4 p-md-5">
+      <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <h5 class="font-weight-bold mb-3 text-primary">General Information</h5>
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Tenant Name *</label>
+            {{ form.name }}
+            {% if form.name.errors %}<small class="text-danger">{{ form.name.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Subdomain Slug *</label>
+            {{ form.slug }}
+            {% if form.slug.errors %}<small class="text-danger">{{ form.slug.errors.0 }}</small>{% endif %}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Tenant Owner *</label>
+            {{ form.owner }}
+            {% if form.owner.errors %}<small class="text-danger">{{ form.owner.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Custom Domain</label>
+            {{ form.custom_domain }}
+            {% if form.custom_domain.errors %}<small class="text-danger">{{ form.custom_domain.errors.0 }}</small>{% endif %}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Contact Email</label>
+            {{ form.contact_email }}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Contact Phone</label>
+            {{ form.contact_phone }}
+          </div>
+        </div>
+
+        <div class="form-group my-3">
+          <div class="custom-control custom-checkbox">
+            {{ form.is_active }}
+            <label class="custom-control-label font-weight-bold" for="{{ form.is_active.id_for_label }}">
+              Tenant is Active (allow logins and tournament access)
+            </label>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h5 class="font-weight-bold mb-3 text-primary">Resource Limits & Allocations</h5>
+        <div class="row">
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Max Tournaments</label>
+            {{ form.max_tournaments }}
+          </div>
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Max Teams per Tourn</label>
+            {{ form.max_teams_per_tournament }}
+          </div>
+          <div class="col-md-4 form-group">
+            <label class="font-weight-bold">Max Adjudicators per Tourn</label>
+            {{ form.max_adjudicators_per_tournament }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Max Manager Accounts</label>
+            {{ form.max_users }}
+          </div>
+          <div class="col-md-6 form-group">
+            <label class="font-weight-bold">Max Storage (MB)</label>
+            {{ form.max_storage_mb }}
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+          <a href="{% url 'superadmin:tenant-list' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4 font-weight-bold">Save Tenant</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -32,6 +32,8 @@ def validate_tournament_slug(value):
 
 
 class Tournament(models.Model):
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE,
+        null=True, verbose_name=_("tenant"))  # null=True during migration only
     name = models.CharField(max_length=100,
         verbose_name=_("name"),
         help_text=_("The full name, e.g. \"Australasian Intervarsity Debating Championships 2016\""))
@@ -41,12 +43,15 @@ class Tournament(models.Model):
     seq = models.IntegerField(blank=True, null=True,
         verbose_name=_("sequence number"),
         help_text=_("A number that determines the relative order in which tournaments are displayed on the homepage."))
-    slug = models.SlugField(unique=True, validators=[validate_tournament_slug],
+    slug = models.SlugField(validators=[validate_tournament_slug],
         verbose_name=_("slug"),
         help_text=_("The sub-URL of the tournament, cannot have spaces, e.g. \"australs2016\""))
     active = models.BooleanField(verbose_name=_("active"), default=True)
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['tenant', 'slug'], name='unique_tenant_slug')
+        ]
         verbose_name = _('tournament')
         verbose_name_plural = _('tournaments')
         ordering = ['seq']
@@ -142,7 +147,14 @@ class Tournament(models.Model):
         return reverse('tournament-admin-home', kwargs={'tournament_slug': self.slug})
 
     def get_public_url(self):
-        return reverse('tournament-public-index', kwargs={'tournament_slug': self.slug})
+        return 'tournaments-public-index', (), {'tournament_slug': self.slug}
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new and self.tenant:
+            from tenants.limits import TenantLimitEnforcer, TenantLimitExceeded
+            TenantLimitEnforcer.check_tournament_limit(self.tenant)
+        super().save(*args, **kwargs)
 
     # --------------------------------------------------------------------------
     # Convenience querysets

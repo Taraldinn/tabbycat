@@ -56,9 +56,12 @@
           <div class="dropdown-divider"></div>
         {% endfor %}
 
-        {% if user.is_staff %}
+        {% if user.is_superuser or user.is_staff %}
+          <a href="{% url 'superadmin:dashboard' %}" class="dropdown-item px-2">
+            <i data-feather="grid"></i>{% trans "Super Admin Console" %}
+          </a>
           <a href="{% url 'admin:index' %}" target="_blank" class="dropdown-item px-2">
-            <i data-feather="database"></i>{% translate "Edit Database" %}
+            <i data-feather="database"></i>{% trans "Edit Database" %}
           </a>
           <div class="dropdown-divider"></div>
         {% endif %}
@@ -101,21 +104,35 @@
 
     </ul>
 
-    <ul class="navbar-nav navbar-my-lg-0">
-      <li class="nav-item">
-        {% if user.is_authenticated %}
+    <ul class="navbar-nav navbar-my-lg-0 align-items-center">
+      {% if user.is_authenticated %}
+        {% if user.is_superuser %}
+          <li class="nav-item mr-2">
+            <a href="{% url 'superadmin:dashboard' %}" class="badge badge-warning p-2">
+              <i data-feather="shield" style="width:12px;height:12px;"></i> SuperAdmin
+            </a>
+          </li>
+        {% endif %}
+        <li class="nav-item">
           <form id="logout-form" action="{% url 'logout' %}" method="post">
             {% csrf_token %}
             <button type="submit" class="btn btn-link nav-link">
               {% trans "Log Out" %} ({{ user }})
             </button>
           </form>
-        {% else %}
+        </li>
+      {% else %}
+        <li class="nav-item mr-2">
           <a class="nav-link" href="{% url 'login' %}">
             {% trans "Login" %}
           </a>
-        {% endif %}
-      </li>
+        </li>
+        <li class="nav-item">
+          <a class="btn btn-sm btn-primary text-white px-3" href="{% url 'accounts:register' %}">
+            {% trans "Create Portal" %}
+          </a>
+        </li>
+      {% endif %}
     </ul>
 
   </div>

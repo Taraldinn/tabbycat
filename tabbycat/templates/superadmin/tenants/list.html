@@ -1,0 +1,112 @@
+{% extends "superadmin/base_superadmin.html" %}
+{% load i18n static %}
+
+{% block sa-title %}{% trans "Tenants & Organizations" %}{% endblock %}
+{% block sa-subtitle %}{% trans "Manage club portals, subdomains, and resource allocations" %}{% endblock %}
+
+{% block sa-actions %}
+<a href="{% url 'superadmin:tenant-create' %}" class="btn btn-primary">
+  <i data-feather="plus"></i> Add Tenant
+</a>
+{% endblock %}
+
+{% block sa-content %}
+<div class="sa-card mb-4">
+  <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center">
+    <form method="get" class="form-inline mb-2 mb-md-0">
+      <div class="input-group mr-2">
+        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search name, slug, domain, owner...">
+        <div class="input-group-append">
+          <button type="submit" class="btn btn-outline-secondary">Search</button>
+        </div>
+      </div>
+      <select name="status" class="custom-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
+      </select>
+    </form>
+
+    <div class="text-muted small">
+      Showing {{ tenants|length }} tenant{{ tenants|length|pluralize }}
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="thead-light">
+        <tr>
+          <th>Name / Slug</th>
+          <th>Owner</th>
+          <th>Subdomain / Domain</th>
+          <th>Resource Limits</th>
+          <th>Usage</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tenant in tenants %}
+        <tr>
+          <td>
+            <div class="font-weight-bold">
+              <a href="{% url 'superadmin:tenant-detail' tenant.pk %}">{{ tenant.name }}</a>
+            </div>
+            <small class="text-muted">Created {{ tenant.created_at|date:"M d, Y" }}</small>
+          </td>
+          <td>
+            <div>{{ tenant.owner.username }}</div>
+            <small class="text-muted">{{ tenant.owner.email }}</small>
+          </td>
+          <td>
+            <code>{{ tenant.slug }}</code>
+            {% if tenant.custom_domain %}
+              <br><small class="badge badge-soft-info">{{ tenant.custom_domain }}</small>
+            {% endif %}
+          </td>
+          <td class="small">
+            <div>Tournaments: <strong>{{ tenant.max_tournaments }}</strong></div>
+            <div>Teams/Tourn: <strong>{{ tenant.max_teams_per_tournament }}</strong></div>
+            <div>Users: <strong>{{ tenant.max_users }}</strong></div>
+          </td>
+          <td class="small">
+            <div>🏆 {{ tenant.tournament_count }} tourns</div>
+            <div>👥 {{ tenant.member_count }} users</div>
+          </td>
+          <td>
+            {% if tenant.is_active %}
+              <span class="badge badge-soft-success">Active</span>
+            {% else %}
+              <span class="badge badge-soft-danger">Inactive</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="btn-group btn-group-sm">
+              <a href="{% url 'superadmin:tenant-detail' tenant.pk %}" class="btn btn-outline-secondary" title="View Details">
+                <i data-feather="eye"></i>
+              </a>
+              <a href="{% url 'superadmin:tenant-edit' tenant.pk %}" class="btn btn-outline-primary" title="Edit">
+                <i data-feather="edit-2"></i>
+              </a>
+              <form method="post" action="{% url 'superadmin:tenant-toggle-active' tenant.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-{% if tenant.is_active %}warning{% else %}success{% endif %}" title="{% if tenant.is_active %}Deactivate{% else %}Activate{% endif %}" onclick="return confirm('Change active status for this tenant?')">
+                  <i data-feather="{% if tenant.is_active %}pause{% else %}play{% endif %}"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-5 text-muted">
+            <i data-feather="inbox" class="mb-2" style="width: 36px; height: 36px;"></i><br>
+            No tenants found matching your query.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

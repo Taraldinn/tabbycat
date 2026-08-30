@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Portal Ready!" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 text-center">
+
+      <div class="card shadow-sm border-0 p-4 p-md-5">
+        <div class="mb-4">
+          <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 72px; height: 72px;">
+            <i data-feather="check" style="width: 36px; height: 36px;"></i>
+          </div>
+        </div>
+
+        <h1 class="font-weight-bold mb-3">Welcome to Tabbycat, {{ request.user.first_name|default:request.user.username }}!</h1>
+        <p class="lead text-muted mb-4">
+          Your debate tournament portal for <strong>{{ tenant.name }}</strong> has been created and is ready to use.
+        </p>
+
+        <div class="alert alert-primary py-3 my-4">
+          <span class="text-uppercase small font-weight-bold text-muted d-block mb-1">Your Personal Subdomain URL</span>
+          <h4 class="font-weight-bold text-primary mb-0">
+            <code>http://{{ tenant.slug }}.{{ base_domain }}:8000</code>
+          </h4>
+        </div>
+
+        <div class="row text-left my-4">
+          <div class="col-md-6 mb-3">
+            <div class="p-3 border rounded h-100 bg-light">
+              <h6 class="font-weight-bold text-primary">🏆 Step 1: Create a Tournament</h6>
+              <p class="small text-muted mb-0">Configure rounds, debate formats (BP/Australs), venues, and speaker categories.</p>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="p-3 border rounded h-100 bg-light">
+              <h6 class="font-weight-bold text-primary">👥 Step 2: Register Participants</h6>
+              <p class="small text-muted mb-0">Import teams, institutions, and adjudicators via CSV or online private URLs.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-3 mt-3">
+          <a href="{% url 'tournament-create' %}" class="btn btn-primary btn-lg mr-3">
+            <i data-feather="plus-circle" class="mr-1"></i> Create First Tournament
+          </a>
+          <a href="{% url 'tabbycat-index' %}" class="btn btn-outline-secondary btn-lg">
+            Go to Portal Home
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
