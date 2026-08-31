@@ -14,20 +14,20 @@
 <div id="clientDashboardApp" class="container-fluid py-4 px-md-5">
   
   <!-- 1. Organization Site Hero Header -->
-  <div class="tc-header flex-wrap gap-2 mb-4">
+  <div class="tc-header flex-wrap gap-3 mb-4">
     <div>
-      <div class="d-flex align-items-center gap-2">
-        <h1 class="tc-header-title">[[ tenant.name || 'My Organization Site' ]]</h1>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="tc-header-title text-dark">[[ tenant.name || 'My Organization Site' ]]</h1>
         <span v-if="tenant.is_active" class="tc-badge tc-badge-success">Live Site Active</span>
         <span v-else class="tc-badge tc-badge-warning">Pending Payment Verification</span>
       </div>
-      <p class="tc-header-subtitle">
-        Primary Subdomain: <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/'" target="_blank" class="font-weight-bold text-primary"><code>[[ tenant.slug ]].[[ baseDomain ]]</code> ↗</a>
-        <span v-if="tenant.custom_domain" class="ml-2">
+      <div class="tc-header-subtitle d-flex align-items-center gap-2 flex-wrap mt-1">
+        <span>Primary Subdomain: <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/'" target="_blank" class="font-weight-bold text-primary"><code>[[ tenant.slug ]].[[ baseDomain ]]</code> ↗</a></span>
+        <span v-if="tenant.custom_domain" class="d-inline-flex align-items-center gap-1">
           &bull; Custom Domain: <a :href="'http://' + tenant.custom_domain + (port ? ':' + port : '') + '/'" target="_blank" class="tc-badge tc-badge-info text-decoration-none"><code>[[ tenant.custom_domain ]]</code> ↗</a>
         </span>
-        <span v-else class="ml-2 tc-badge" style="background: #f1f5f9; color: #64748b;">No Custom Domain</span>
-      </p>
+        <span v-else class="tc-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">No Custom Domain</span>
+      </div>
     </div>
     
     <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -44,14 +44,14 @@
   </div>
 
   <!-- Pending Verification Alert Banner -->
-  <div v-if="pendingPayments.length > 0" class="alert alert-warning d-flex justify-content-between align-items-center p-3 mb-4 rounded border-warning">
+  <div v-if="pendingPayments.length > 0" class="alert alert-warning d-flex justify-content-between align-items-center p-3 mb-4 rounded border-warning shadow-sm">
     <div class="d-flex align-items-center gap-2">
       <i data-feather="clock" class="text-warning flex-shrink-0" style="width: 22px; height: 22px;"></i>
-      <div>
-        <strong>Pending Payment Verification:</strong> You have [[ pendingPayments.length ]] payment receipt(s) in review queue. Limits will update as soon as admins verify your transaction.
+      <div class="text-dark">
+        <strong>Pending Payment Verification:</strong> You have <strong>[[ pendingPayments.length ]]</strong> payment receipt(s) in review queue. Limits will update automatically as soon as platform admins verify your transaction.
       </div>
     </div>
-    <a v-if="subscription" :href="'/billing/status/' + subscription.id + '/'" class="tc-btn tc-btn-sm btn-dark text-nowrap">
+    <a v-if="subscription" :href="'/billing/status/' + subscription.id + '/'" class="tc-btn tc-btn-sm tc-btn-primary text-nowrap">
       View Queue Status
     </a>
   </div>
@@ -73,7 +73,7 @@
             :style="{ width: tournamentUsagePercent + '%' }">
           </div>
         </div>
-        <div class="d-flex justify-content-between text-muted small mt-2">
+        <div class="d-flex justify-content-between small mt-2 font-weight-bold text-secondary">
           <span>[[ limits.max_tournaments - tournaments.length ]] remaining</span>
           <span>[[ tournamentUsagePercent ]]% used</span>
         </div>
@@ -84,12 +84,12 @@
       <div class="tc-stat-card">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="tc-stat-label">Team Capacity</span>
-          <div class="tc-stat-icon" style="background: #f0fdf4; color: #16a34a; width: 32px; height: 32px;">
+          <div class="tc-stat-icon" style="background: #dcfce7; color: #166534; width: 34px; height: 34px;">
             <i data-feather="users"></i>
           </div>
         </div>
-        <div class="tc-stat-val">[[ limits.max_teams ]] <small class="text-muted fs-6">teams</small></div>
-        <div class="text-muted small mt-1">Per individual tournament</div>
+        <div class="tc-stat-val text-dark">[[ limits.max_teams ]] <small class="text-muted fs-6 font-weight-normal">teams</small></div>
+        <div class="text-secondary small mt-1 font-weight-medium">Per individual tournament</div>
       </div>
     </div>
 
@@ -97,17 +97,17 @@
       <div class="tc-stat-card">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="tc-stat-label">Adjudicator Capacity</span>
-          <div class="tc-stat-icon" style="background: #fefce8; color: #ca8a04; width: 32px; height: 32px;">
+          <div class="tc-stat-icon" style="background: #fef3c7; color: #92400e; width: 34px; height: 34px;">
             <i data-feather="award"></i>
           </div>
         </div>
-        <div class="tc-stat-val">[[ limits.max_adjudicators ]] <small class="text-muted fs-6">adjudicators</small></div>
-        <div class="text-muted small mt-1">Per individual tournament</div>
+        <div class="tc-stat-val text-dark">[[ limits.max_adjudicators ]] <small class="text-muted fs-6 font-weight-normal">adjudicators</small></div>
+        <div class="text-secondary small mt-1 font-weight-medium">Per individual tournament</div>
       </div>
     </div>
 
     <div class="col-xl-3 col-md-6 mb-3">
-      <div class="tc-stat-card" style="background: #ffffff; border-color: #c7d2fe;">
+      <div class="tc-stat-card" style="background: #ffffff; border-color: #a5b4fc;">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="tc-stat-label">Subscription Plan</span>
           <span class="tc-badge tc-badge-primary">[[ plan ? plan.name : 'Starter Plan' ]]</span>
@@ -115,7 +115,7 @@
         <div class="tc-stat-val text-primary">
           <span v-if="plan && plan.price_bdt > 0">৳[[ plan.price_bdt ]]</span>
           <span v-else>Free Tier</span>
-          <small class="text-muted fs-6">/[[ plan ? plan.billing_period : 'lifetime' ]]</small>
+          <small class="text-muted fs-6 font-weight-normal">/[[ plan ? plan.billing_period : 'lifetime' ]]</small>
         </div>
         <div class="d-flex justify-content-between align-items-center mt-2">
           <span v-if="subscription && subscription.status === 'active'" class="tc-badge tc-badge-success">Active</span>
@@ -175,7 +175,28 @@
             </div>
           </div>
           <div class="tc-card-body">
-            <p class="small text-muted mb-3">
+            
+            <!-- Connected Domain Status Banner & Delete Action -->
+            <div v-if="tenant.custom_domain" class="p-3 mb-4 rounded border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div>
+                <div class="small text-muted font-weight-bold">CURRENT CUSTOM DOMAIN:</div>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                  <a :href="'http://' + tenant.custom_domain + (port ? ':' + port : '') + '/'" target="_blank" class="h6 mb-0 font-weight-bold text-primary text-decoration-none">
+                    https://[[ tenant.custom_domain ]] ↗
+                  </a>
+                  <span class="tc-badge tc-badge-success">Active</span>
+                </div>
+              </div>
+              <form method="post" action="{% url 'accounts:dashboard' %}" onsubmit="return confirm('Are you sure you want to disconnect your custom domain? Your site will immediately revert to your default subdomain.');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_domain">
+                <button type="submit" class="tc-btn tc-btn-sm tc-btn-danger">
+                  <i data-feather="trash-2"></i> Disconnect Custom Domain
+                </button>
+              </form>
+            </div>
+
+            <p class="small text-secondary mb-3">
               Connect your own custom branded domain (e.g. <code>debates.nsudc.org</code> or <code>tab.yourclub.com</code>) to your dedicated Tabbycat application.
             </p>
 
@@ -184,7 +205,7 @@
               <input type="hidden" name="action" value="update_domain">
 
               <div class="mb-3">
-                <label class="font-weight-bold small mb-1">Organization Site Name</label>
+                <label class="font-weight-bold small text-dark mb-1">Organization Site Name</label>
                 <input 
                   type="text" 
                   name="name" 
@@ -194,21 +215,26 @@
               </div>
 
               <div class="mb-3">
-                <label class="font-weight-bold small mb-1">Custom Domain Name (Field)</label>
-                <input 
-                  type="text" 
-                  name="custom_domain" 
-                  class="tc-search-input form-control" 
-                  placeholder="e.g. debates.nsudc.org" 
-                  v-model="tenant.custom_domain">
+                <label class="font-weight-bold small text-dark mb-1">Custom Domain Name</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light text-secondary font-weight-bold small">https://</span>
+                  <input 
+                    type="text" 
+                    name="custom_domain" 
+                    class="tc-search-input form-control" 
+                    placeholder="e.g. debates.nsudc.org" 
+                    v-model="tenant.custom_domain">
+                </div>
                 <small class="text-muted d-block mt-1">
-                  Enter your domain (e.g. <code>debates.nsudc.org</code>). Leave blank to use <code>[[ tenant.slug ]].[[ baseDomain ]]</code>.
+                  Enter your domain (e.g. <code>debates.nsudc.org</code>). Leave blank or remove to use <code>[[ tenant.slug ]].[[ baseDomain ]]</code>.
                 </small>
               </div>
 
-              <button type="submit" class="tc-btn tc-btn-primary font-weight-bold">
-                <i data-feather="save"></i> Save Custom Domain
-              </button>
+              <div class="d-flex align-items-center gap-2">
+                <button type="submit" class="tc-btn tc-btn-primary font-weight-bold">
+                  <i data-feather="save"></i> Save Custom Domain
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -224,7 +250,7 @@
             </div>
           </div>
           <div class="tc-card-body">
-            <p class="small text-muted mb-3">
+            <p class="small text-secondary mb-3">
               To route your custom domain to Tabbycat, add a <strong>CNAME Record</strong> in your domain provider's DNS panel (e.g. Cloudflare, Namecheap, GoDaddy):
             </p>
 
@@ -250,10 +276,10 @@
             </div>
 
             <div class="p-3 bg-light rounded small border">
-              <strong>Site Access Points:</strong>
-              <ul class="mb-0 pl-3 mt-1 text-muted">
-                <li>Primary: <code>http://[[ tenant.slug ]].[[ baseDomain ]]</code></li>
-                <li v-if="tenant.custom_domain">Custom: <code>http://[[ tenant.custom_domain ]]</code></li>
+              <strong class="text-dark">Site Access Endpoints:</strong>
+              <ul class="mb-0 pl-3 mt-1 text-secondary">
+                <li>Primary Subdomain: <code>http://[[ tenant.slug ]].[[ baseDomain ]]</code></li>
+                <li v-if="tenant.custom_domain">Branded Custom Domain: <code>http://[[ tenant.custom_domain ]]</code></li>
               </ul>
             </div>
           </div>
@@ -301,14 +327,14 @@
             </div>
           </div>
           <div class="tc-card-body">
-            <p class="small text-muted mb-3">Grant user access to manage tournaments and operations for this site.</p>
+            <p class="small text-secondary mb-3">Grant user access to manage tournaments and operations for this site.</p>
 
             <form method="post" action="{% url 'accounts:dashboard' %}">
               {% csrf_token %}
               <input type="hidden" name="action" value="add_manager">
 
               <div class="mb-3">
-                <label class="font-weight-bold small mb-1">Username or Email *</label>
+                <label class="font-weight-bold small text-dark mb-1">Username or Email *</label>
                 <input 
                   type="text" 
                   name="username_or_email" 
@@ -318,7 +344,7 @@
               </div>
 
               <div class="mb-3">
-                <label class="font-weight-bold small mb-1">Role *</label>
+                <label class="font-weight-bold small text-dark mb-1">Role *</label>
                 <select name="role" class="form-select custom-select tc-search-input w-100" required>
                   <option value="admin">Site Administrator (Full Access)</option>
                   <option value="member">Site Member / Staff</option>
@@ -371,25 +397,25 @@
         <tbody>
           <tr v-for="t in filteredTournaments" :key="t.id">
             <td>
-              <div class="font-weight-bold text-dark">[[ t.name ]]</div>
+              <div class="font-weight-bold text-dark fs-6">[[ t.name ]]</div>
               <small class="text-muted">Slug: <code>[[ t.slug ]]</code></small>
             </td>
             <td>
               <span class="tc-badge tc-badge-info">[[ t.format_display || 'BP' ]]</span>
             </td>
             <td>
-              <span class="font-weight-bold">[[ t.rounds_count ]]</span> rounds
+              <span class="font-weight-bold text-dark">[[ t.rounds_count ]]</span> rounds
             </td>
             <td>
               <span v-if="t.active" class="tc-badge tc-badge-success">Live Event</span>
-              <span v-else class="tc-badge">Concluded</span>
+              <span v-else class="tc-badge" style="background: #f1f5f9; color: #475569;">Concluded</span>
             </td>
             <td class="text-right">
-              <div class="d-inline-flex gap-1">
+              <div class="d-inline-flex gap-2">
                 <a :href="'/' + t.slug + '/'" class="tc-btn tc-btn-outline tc-btn-sm" target="_blank" title="Public Tab">
                   <i data-feather="globe"></i> Public
                 </a>
-                <a :href="'/' + t.slug + '/admin/'" class="tc-btn tc-btn-primary tc-btn-sm" title="Administration Room">
+                <a :href="'/' + t.slug + '/admin/'" class="tc-btn tc-btn-primary tc-btn-sm font-weight-bold" title="Administration Room">
                   <i data-feather="settings"></i> Manage
                 </a>
               </div>
@@ -423,25 +449,25 @@
             <div class="tc-stat-label">Active Plan</div>
             <div class="d-flex align-items-baseline gap-2">
               <span class="fs-4 font-weight-bold text-primary">[[ plan ? plan.name : 'Free Tier' ]]</span>
-              <span class="text-muted">৳[[ plan ? plan.price_bdt : 0 ]]/[[ plan ? plan.billing_period : 'lifetime' ]]</span>
+              <span class="text-secondary font-weight-bold">৳[[ plan ? plan.price_bdt : 0 ]]/[[ plan ? plan.billing_period : 'lifetime' ]]</span>
             </div>
-            <p class="text-muted small mt-1 mb-0">[[ plan ? plan.description : 'Standard access' ]]</p>
+            <p class="text-secondary small mt-1 mb-0">[[ plan ? plan.description : 'Standard access' ]]</p>
           </div>
           <div class="col-md-6 border-start-md">
             <div class="small">
               <div class="d-flex justify-content-between py-1 border-bottom">
-                <span class="text-muted">Primary Subdomain:</span>
-                <code class="text-primary">[[ tenant.slug ]].[[ baseDomain ]]</code>
+                <span class="text-secondary font-weight-medium">Primary Subdomain:</span>
+                <code class="text-primary font-weight-bold">[[ tenant.slug ]].[[ baseDomain ]]</code>
               </div>
               <div class="d-flex justify-content-between py-1 border-bottom">
-                <span class="text-muted">Subscription Status:</span>
+                <span class="text-secondary font-weight-medium">Subscription Status:</span>
                 <span v-if="subscription && subscription.status === 'active'" class="tc-badge tc-badge-success">Active</span>
                 <span v-else-if="subscription && subscription.status === 'pending'" class="tc-badge tc-badge-warning">Verification Pending</span>
                 <span v-else class="tc-badge tc-badge-success">Active</span>
               </div>
               <div class="d-flex justify-content-between py-1">
-                <span class="text-muted">Tournament Quota:</span>
-                <span><strong>[[ limits.max_tournaments ]]</strong> tournaments allowed</span>
+                <span class="text-secondary font-weight-medium">Tournament Quota:</span>
+                <span class="text-dark font-weight-bold">[[ limits.max_tournaments ]] tournaments allowed</span>
               </div>
             </div>
           </div>
@@ -474,7 +500,7 @@
           <tbody>
             <tr v-for="p in payments" :key="p.id">
               <td>
-                <div class="font-weight-bold">[[ p.date ]]</div>
+                <div class="font-weight-bold text-dark">[[ p.date ]]</div>
                 <small class="text-muted">[[ p.time ]]</small>
               </td>
               <td>
@@ -484,7 +510,7 @@
                 <span class="tc-badge tc-badge-info">[[ p.method ]]</span>
               </td>
               <td>
-                <code>[[ p.trx_id || '-' ]]</code>
+                <code class="text-dark font-weight-bold">[[ p.trx_id || '-' ]]</code>
               </td>
               <td>
                 <span v-if="p.status === 'verified'" class="tc-badge tc-badge-success">Verified</span>
@@ -511,7 +537,7 @@
       <div class="tc-modal-header">
         <div class="d-flex align-items-center gap-2">
           <i data-feather="repeat" class="text-primary"></i>
-          <h5 class="font-weight-bold mb-0">Select Upgrade / Renewal Plan</h5>
+          <h5 class="font-weight-bold mb-0 text-dark">Select Upgrade / Renewal Plan</h5>
         </div>
         <button type="button" class="btn-close" @click="showUpgradeModal = false">&times;</button>
       </div>
@@ -520,7 +546,7 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="upgrade_plan">
         <div class="tc-modal-body">
-          <p class="small text-muted mb-3">Choose the plan you wish to upgrade or renew for <strong>[[ tenant.name ]]</strong>:</p>
+          <p class="small text-secondary mb-3">Choose the plan you wish to upgrade or renew for <strong class="text-dark">[[ tenant.name ]]</strong>:</p>
 
           <div class="row g-3">
             <div v-for="p in allPlans" :key="p.id" class="col-md-6 mb-3">
@@ -539,7 +565,7 @@
                   ৳[[ p.price_bdt ]] <small class="text-muted fs-6 font-weight-normal">/[[ p.billing_period ]]</small>
                 </div>
 
-                <ul class="list-unstyled small text-muted mb-0 mt-2" style="font-size: 0.75rem;">
+                <ul class="list-unstyled small text-secondary mb-0 mt-2" style="font-size: 0.75rem;">
                   <li>✓ [[ p.max_tournaments ]] Tournaments</li>
                   <li>✓ [[ p.max_teams ]] Teams / Event</li>
                   <li>✓ [[ p.max_adjudicators ]] Adjudicators / Event</li>

@@ -244,6 +244,12 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
                     messages.error(request, err.as_text())
             return redirect('accounts:dashboard')
 
+        elif action == 'delete_domain':
+            tenant.custom_domain = None
+            tenant.save(update_fields=['custom_domain'])
+            messages.success(request, _("Custom domain removed successfully. Your site is accessible via %s.%s.") % (tenant.slug, getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')))
+            return redirect('accounts:dashboard')
+
         # 2. Add Site Manager Action
         elif action == 'add_manager':
             form = TenantManagerAddForm(tenant, data=request.POST)

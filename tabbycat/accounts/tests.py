@@ -273,6 +273,17 @@ class ClientDashboardAndQueueTestCase(TestCase):
         self.tenant.refresh_from_db()
         self.assertNotEqual(self.tenant.custom_domain, 'debates.taken.org')
 
+    def test_delete_custom_domain_success(self):
+        self.tenant.custom_domain = 'debates.iubdc.org'
+        self.tenant.save()
+
+        payload = {'action': 'delete_domain'}
+        res = self.client.post(reverse('accounts:dashboard'), payload)
+        self.assertRedirects(res, reverse('accounts:dashboard'))
+
+        self.tenant.refresh_from_db()
+        self.assertIsNone(self.tenant.custom_domain)
+
     def test_add_site_manager_success(self):
         new_manager = User.objects.create_user(
             username='manager_tara', email='tara@iubdc.org', password='Password123!'
