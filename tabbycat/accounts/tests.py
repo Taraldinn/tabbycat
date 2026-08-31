@@ -247,3 +247,55 @@ class ClientDashboardAndQueueTestCase(TestCase):
         self.assertEqual(self.sub.plan, self.plan2)
         self.assertEqual(self.sub.status, Subscription.Status.PENDING)
         self.assertRedirects(res, reverse('billing:checkout', kwargs={'subscription_id': self.sub.id}))
+
+    def test_update_custom_domain_success(self):
+        payload = {
+            'action': 'update_domain',
+            'custom_domain': 'debates.iubdc.org'
+        }
+        res = self.client.post(reverse('accounts:dashboard'), payload)
+        self.assertRedirects(res, reverse('accounts:dashboard'))
+
+        self.tenant.refresh_from_db()
+        self.assertEqual(self.tenant.custom_domain, 'debates.iubdc.org')
+
+    def test_update_custom_domain_duplicate(self):
+        other_user = User.objects.create_user(username='other_u', email='other@test.com', password='Password123!')
+        Tenant.objects.create(name='Other Org', slug='other-org', owner=other_user, custom_domain='debates.taken.org')
+
+        payload = {
+            'action': 'update_domain',
+            'custom_domain': 'debates.taken.org'
+        }
+        res = self.client.post(reverse('accounts:dashboard'), payload)
+        self.assertRedirects(res, reverse('accounts:dashboard'))
+
+        self.tenant.refresh_from_db()
+        self.assertNotEqual(self.tenant.custom_domain, 'debates.taken.org')
+
+    def test_add_site_manager_success(self):
+        new_manager = User.objects.create_user(
+            username='manager_tara', email='tara@iubdc.org', password='Password123!'
+        )
+        payload = {
+            'action': 'add_manager',
+            'username_or_email': 'manager_tara',
+            'role': TenantMembership.Role.ADMIN
+        }
+        res = self.client.post(reverse('accounts:dashboard'), payload)
+        self.assertRedirects(res, reverse('accounts:dashboard'))
+
+        membership = TenantMembership.objects.filter(tenant=self.tenant, user=new_manager).first()
+        self.assertIsNotNone(membership)
+        self.assertEqual(membership.role, TenantMembership.Role.ADMIN)
+
+    def test_add_site_manager_nonexistent_user(self):
+        payload = {
+            'action': 'add_manager',
+            'username_or_email': 'ghost_user',
+            'role': TenantMembership.Role.MEMBER
+        }
+        res = self.client.post(reverse('accounts:dashboard'), payload)
+        self.assertRedirects(res, reverse('accounts:dashboard'))
+        self.assertEqual(TenantMembership.objects.filter(tenant=self.tenant).count(), 1)
+

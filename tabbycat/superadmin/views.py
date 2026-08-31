@@ -1,4 +1,5 @@
 from datetime import timedelta
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, Sum
@@ -446,3 +447,31 @@ class GlobalUserListView(SuperAdminRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['query'] = self.request.GET.get('q', '')
         return context
+
+
+class UserSendPasswordResetView(SuperAdminRequiredMixin, View):
+    def post(self, request, pk):
+        target_user = get_object_or_404(User, pk=pk)
+        if not target_user.email:
+            messages.error(request, _("User '%s' does not have an email address configured.") % target_user.username)
+            return redirect(request.META.get('HTTP_REFERER', reverse('superadmin:user-list')))
+
+        from django.contrib.auth.forms import PasswordResetForm
+        form = PasswordResetForm({'email': target_user.email})
+        if form.is_valid():
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@tabbycatbd.com'),
+                email_template_name='registration/password_reset_email.html',
+                subject_template_name='registration/password_reset_subject.txt',
+            )
+            messages.success(request, _("Password reset email sent to '%(email)s' for user %(username)s.") % {
+                'email': target_user.email,
+                'username': target_user.username
+            })
+        else:
+            messages.error(request, _("Could not generate password reset for user '%s'.") % target_user.username)
+
+        return redirect(request.META.get('HTTP_REFERER', reverse('superadmin:user-list')))
+

@@ -33,4 +33,5 @@ urlpatterns = [
     # Tournaments & Users
     path('tournaments/', views.GlobalTournamentListView.as_view(), name='tournament-list'),
     path('users/', views.GlobalUserListView.as_view(), name='user-list'),
+    path('users/<int:pk>/send-password-reset/', views.UserSendPasswordResetView.as_view(), name='user-send-password-reset'),
 ]

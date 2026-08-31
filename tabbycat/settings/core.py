@@ -352,6 +352,36 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # ==============================================================================
+# Caching (PostgreSQL DB Cache by default for memory efficiency & single-service stack)
+# ==============================================================================
+
+USE_REDIS = bool(int(os.environ.get('USE_REDIS', 0)))
+
+if USE_REDIS:
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1')
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'tabbycat_db_cache',
+            'TIMEOUT': 300,
+            'OPTIONS': {
+                'MAX_ENTRIES': 2000,
+                'CULL_FREQUENCY': 3,
+            }
+        }
+    }
+
+# ==============================================================================
 # Channels
 # ==============================================================================
 
@@ -362,6 +392,14 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
+
+# ==============================================================================
+# SMS Notifications
+# ==============================================================================
+
+SMS_BACKEND = os.environ.get('SMS_BACKEND', 'notifications.sms.ConsoleSMSBackend')
+SMS_API_KEY = os.environ.get('SMS_API_KEY', '')
+SMS_SENDER_ID = os.environ.get('SMS_SENDER_ID', 'Tabbycat')
 
 # ==============================================================================
 # Dynamic preferences

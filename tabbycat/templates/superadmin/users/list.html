@@ -27,6 +27,7 @@
           <th>Tenants / Roles</th>
           <th>Platform Role</th>
           <th>Joined</th>
+          <th class="text-right">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -36,7 +37,7 @@
             <div class="font-weight-bold">{{ u.username }}</div>
             <small class="text-muted">{{ u.get_full_name }}</small>
           </td>
-          <td>{{ u.email }}</td>
+          <td>{{ u.email|default:"-" }}</td>
           <td>
             {{ u.profile.phone|default:"-" }}
           </td>
@@ -60,10 +61,24 @@
             {% endif %}
           </td>
           <td>{{ u.date_joined|date:"M d, Y" }}</td>
+          <td class="text-right">
+            {% if u.email %}
+            <form action="{% url 'superadmin:user-send-password-reset' u.pk %}" method="post" class="d-inline" onsubmit="return confirm('Send password reset instructions to {{ u.email }}?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-primary" title="Send Password Reset Email">
+                <i data-feather="key"></i> Reset Link
+              </button>
+            </form>
+            {% else %}
+            <button type="button" class="btn btn-sm btn-outline-secondary disabled" title="No email on account" disabled>
+              No Email
+            </button>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" class="text-center py-4 text-muted">No users found.</td>
+          <td colspan="7" class="text-center py-4 text-muted">No users found.</td>
         </tr>
         {% endfor %}
       </tbody>

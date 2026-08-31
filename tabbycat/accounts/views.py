@@ -13,7 +13,7 @@ from django.views.generic import DetailView, FormView, TemplateView
 
 from billing.models import Payment, Plan, Subscription
 from tenants.models import Tenant, TenantMembership
-from .forms import UserProfileUpdateForm, UserRegistrationWithTenantForm
+from .forms import TenantDomainForm, TenantManagerAddForm, UserProfileUpdateForm, UserRegistrationWithTenantForm
 from .models import UserProfile
 
 User = get_user_model()
@@ -136,11 +136,8 @@ class TenantOnboardingSuccessView(LoginRequiredMixin, TemplateView):
 class ClientDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'accounts/client_dashboard.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_active_tenant(self):
         user = self.request.user
-
-        # Fetch active tenant
         tenant = getattr(self.request, 'tenant', None)
         if not tenant:
             tenant = Tenant.objects.filter(owner=user).first()
@@ -148,6 +145,45 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
             membership = TenantMembership.objects.filter(user=user).select_related('tenant').first()
             if membership:
                 tenant = membership.tenant
+        if not tenant and user.is_authenticated:
+            import re
+            base_slug = re.sub(r'[^a-z0-9-]', '', user.username.lower())[:30] or 'club'
+            slug = base_slug
+            counter = 1
+            while Tenant.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            starter_plan = Plan.objects.filter(price_bdt=0, is_active=True).first()
+            tenant = Tenant.objects.create(
+                name=f"{user.first_name or user.username}'s Organization",
+                slug=slug,
+                owner=user,
+                is_active=True,
+                max_tournaments=starter_plan.max_tournaments if starter_plan else 1,
+                max_teams_per_tournament=starter_plan.max_teams_per_tournament if starter_plan else 50,
+                max_adjudicators_per_tournament=starter_plan.max_adjudicators_per_tournament if starter_plan else 30,
+            )
+            TenantMembership.objects.create(
+                tenant=tenant,
+                user=user,
+                role=TenantMembership.Role.OWNER
+            )
+            if starter_plan:
+                now = timezone.now()
+                Subscription.objects.create(
+                    tenant=tenant,
+                    plan=starter_plan,
+                    status=Subscription.Status.ACTIVE,
+                    started_at=now,
+                    current_period_start=now,
+                    current_period_end=now + timedelta(days=36500)
+                )
+        return tenant
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.get_active_tenant()
 
         context['tenant'] = tenant
         context['base_domain'] = getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
@@ -158,6 +194,7 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
             subscription = getattr(tenant, 'subscription', None)
             plan = subscription.plan if subscription else None
             payments = subscription.payments.all().order_by('-created_at') if subscription else []
+            memberships = tenant.memberships.select_related('user').order_by('role', 'joined_at')
 
             context['tournaments'] = tournaments
             context['tournaments_count'] = tournaments.count()
@@ -166,6 +203,9 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
             context['plan'] = plan
             context['payments'] = payments
             context['pending_payments'] = [p for p in payments if p.status == Payment.Status.PENDING]
+            context['memberships'] = memberships
+            context['domain_form'] = TenantDomainForm(tenant=tenant)
+            context['manager_form'] = TenantManagerAddForm(tenant=tenant)
             context['max_tournaments'] = tenant.max_tournaments
             context['max_teams'] = tenant.max_teams_per_tournament
             context['max_adjudicators'] = tenant.max_adjudicators_per_tournament
@@ -179,17 +219,43 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
             context['plan'] = None
             context['payments'] = []
             context['pending_payments'] = []
+            context['memberships'] = []
+            context['domain_form'] = None
+            context['manager_form'] = None
 
         return context
 
     def post(self, request, *args, **kwargs):
-        """Handle queue upgrade/plan change from the organizational portal"""
-        user = request.user
-        tenant = getattr(request, 'tenant', None) or Tenant.objects.filter(owner=user).first()
+        tenant = self.get_active_tenant()
         if not tenant:
-            messages.error(request, _("No organization found to update subscription."))
+            messages.error(request, _("No organization found."))
             return redirect('accounts:dashboard')
 
+        action = request.POST.get('action')
+
+        # 1. Custom Domain Action
+        if action == 'update_domain':
+            form = TenantDomainForm(tenant, data=request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, _("Custom domain updated successfully! Please ensure your DNS CNAME points to %s.") % getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com'))
+            else:
+                for err in form.errors.values():
+                    messages.error(request, err.as_text())
+            return redirect('accounts:dashboard')
+
+        # 2. Add Site Manager Action
+        elif action == 'add_manager':
+            form = TenantManagerAddForm(tenant, data=request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, _("New manager added to '%s' successfully.") % tenant.name)
+            else:
+                for err in form.errors.values():
+                    messages.error(request, err.as_text())
+            return redirect('accounts:dashboard')
+
+        # 3. Upgrade / Renewal Action (default)
         new_plan_id = request.POST.get('new_plan_id')
         if not new_plan_id:
             messages.error(request, _("Please select a valid plan."))

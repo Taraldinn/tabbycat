@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block page-title %}{% trans "Organization Dashboard" %}{% endblock %}
+{% block page-title %}{% trans "Organization Site Portal" %}{% endblock %}
 
 {% block extra-head %}
 <link rel="stylesheet" href="{% static 'css/modern_compact_ui.css' %}">
@@ -13,34 +13,37 @@
 {% block content %}
 <div id="clientDashboardApp" class="container-fluid py-4 px-md-5">
   
-  <!-- 1. Organization Header -->
-  <div class="tc-header flex-wrap gap-2">
+  <!-- 1. Organization Site Hero Header -->
+  <div class="tc-header flex-wrap gap-2 mb-4">
     <div>
       <div class="d-flex align-items-center gap-2">
-        <h1 class="tc-header-title">[[ tenant.name || 'My Organization' ]]</h1>
-        <span v-if="tenant.is_active" class="tc-badge tc-badge-success">Active Portal</span>
-        <span v-else class="tc-badge tc-badge-warning">Pending Activation</span>
+        <h1 class="tc-header-title">[[ tenant.name || 'My Organization Site' ]]</h1>
+        <span v-if="tenant.is_active" class="tc-badge tc-badge-success">Live Site Active</span>
+        <span v-else class="tc-badge tc-badge-warning">Pending Payment Verification</span>
       </div>
       <p class="tc-header-subtitle">
-        Subdomain: <code class="text-primary font-weight-bold">[[ tenant.slug ]].[[ baseDomain ]]</code>
-        <span v-if="tenant.custom_domain" class="ml-2 tc-badge tc-badge-info">[[ tenant.custom_domain ]]</span>
+        Primary Subdomain: <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/'" target="_blank" class="font-weight-bold text-primary"><code>[[ tenant.slug ]].[[ baseDomain ]]</code> ↗</a>
+        <span v-if="tenant.custom_domain" class="ml-2">
+          &bull; Custom Domain: <a :href="'http://' + tenant.custom_domain + (port ? ':' + port : '') + '/'" target="_blank" class="tc-badge tc-badge-info text-decoration-none"><code>[[ tenant.custom_domain ]]</code> ↗</a>
+        </span>
+        <span v-else class="ml-2 tc-badge" style="background: #f1f5f9; color: #64748b;">No Custom Domain</span>
       </p>
     </div>
     
     <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/'" target="_blank" class="tc-btn tc-btn-primary">
+        <i data-feather="external-link"></i> Launch Core App Site
+      </a>
+      <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/admin/'" target="_blank" class="tc-btn tc-btn-outline">
+        <i data-feather="shield"></i> Site Admin Console
+      </a>
       <button type="button" class="tc-btn tc-btn-outline" @click="showUpgradeModal = true">
-        <i data-feather="repeat"></i> Upgrade / Renew Plan
+        <i data-feather="repeat"></i> Upgrade / Renew
       </button>
-      <a v-if="subscription" :href="'/billing/status/' + subscription.id + '/'" class="tc-btn tc-btn-outline">
-        <i data-feather="credit-card"></i> Invoices & History
-      </a>
-      <a href="{% url 'tournament-create' %}" class="tc-btn tc-btn-primary" :class="{ disabled: isQuotaFull }">
-        <i data-feather="plus"></i> Create Tournament
-      </a>
     </div>
   </div>
 
-  <!-- Pending Subscription Verification Alert Banner -->
+  <!-- Pending Verification Alert Banner -->
   <div v-if="pendingPayments.length > 0" class="alert alert-warning d-flex justify-content-between align-items-center p-3 mb-4 rounded border-warning">
     <div class="d-flex align-items-center gap-2">
       <i data-feather="clock" class="text-warning flex-shrink-0" style="width: 22px; height: 22px;"></i>
@@ -53,9 +56,8 @@
     </a>
   </div>
 
-  <!-- 2. Metric & Quota Cards Row -->
+  <!-- 2. Quota & Limits Metric Cards -->
   <div class="row g-3 mb-4">
-    <!-- Quota 1: Tournaments -->
     <div class="col-xl-3 col-md-6 mb-3">
       <div class="tc-stat-card">
         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -78,11 +80,10 @@
       </div>
     </div>
 
-    <!-- Quota 2: Team Capacity -->
     <div class="col-xl-3 col-md-6 mb-3">
       <div class="tc-stat-card">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="tc-stat-label">Max Teams / Event</span>
+          <span class="tc-stat-label">Team Capacity</span>
           <div class="tc-stat-icon" style="background: #f0fdf4; color: #16a34a; width: 32px; height: 32px;">
             <i data-feather="users"></i>
           </div>
@@ -92,11 +93,10 @@
       </div>
     </div>
 
-    <!-- Quota 3: Adjudicator Capacity -->
     <div class="col-xl-3 col-md-6 mb-3">
       <div class="tc-stat-card">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="tc-stat-label">Max Adjudicators</span>
+          <span class="tc-stat-label">Adjudicator Capacity</span>
           <div class="tc-stat-icon" style="background: #fefce8; color: #ca8a04; width: 32px; height: 32px;">
             <i data-feather="award"></i>
           </div>
@@ -106,22 +106,21 @@
       </div>
     </div>
 
-    <!-- Plan & Subscription Status Widget -->
     <div class="col-xl-3 col-md-6 mb-3">
       <div class="tc-stat-card" style="background: #ffffff; border-color: #c7d2fe;">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="tc-stat-label">Current Subscription</span>
-          <span class="tc-badge tc-badge-primary">[[ plan ? plan.name : 'Custom Plan' ]]</span>
+          <span class="tc-stat-label">Subscription Plan</span>
+          <span class="tc-badge tc-badge-primary">[[ plan ? plan.name : 'Starter Plan' ]]</span>
         </div>
         <div class="tc-stat-val text-primary">
-          <span v-if="plan">৳[[ plan.price_bdt ]]</span>
-          <span v-else>Free</span>
-          <small class="text-muted fs-6">/[[ plan ? plan.billing_period : 'period' ]]</small>
+          <span v-if="plan && plan.price_bdt > 0">৳[[ plan.price_bdt ]]</span>
+          <span v-else>Free Tier</span>
+          <small class="text-muted fs-6">/[[ plan ? plan.billing_period : 'lifetime' ]]</small>
         </div>
         <div class="d-flex justify-content-between align-items-center mt-2">
           <span v-if="subscription && subscription.status === 'active'" class="tc-badge tc-badge-success">Active</span>
           <span v-else-if="subscription && subscription.status === 'pending'" class="tc-badge tc-badge-warning">Pending Review</span>
-          <span v-else class="tc-badge tc-badge-info">Active</span>
+          <span v-else class="tc-badge tc-badge-success">Active</span>
           <button type="button" @click="showUpgradeModal = true" class="btn btn-link p-0 small font-weight-bold text-primary text-decoration-none">
             Change Plan ➔
           </button>
@@ -130,32 +129,219 @@
     </div>
   </div>
 
-  <!-- 3. Navigation View Switcher (Tournaments vs Subscriptions Queue) -->
-  <div class="d-flex gap-2 mb-3 border-bottom pb-2">
+  <!-- 3. Navigation View Switcher Tabs -->
+  <div class="d-flex gap-2 mb-3 border-bottom pb-2 flex-wrap">
+    <button 
+      type="button" 
+      class="tc-btn tc-btn-sm" 
+      :class="activeSection === 'domains' ? 'tc-btn-primary' : 'tc-btn-outline'" 
+      @click="activeSection = 'domains'">
+      <i data-feather="globe"></i> Site Domains & DNS
+    </button>
+    <button 
+      type="button" 
+      class="tc-btn tc-btn-sm" 
+      :class="activeSection === 'managers' ? 'tc-btn-primary' : 'tc-btn-outline'" 
+      @click="activeSection = 'managers'">
+      <i data-feather="users"></i> Site Admins & Permissions ([[ memberships.length ]])
+    </button>
     <button 
       type="button" 
       class="tc-btn tc-btn-sm" 
       :class="activeSection === 'tournaments' ? 'tc-btn-primary' : 'tc-btn-outline'" 
       @click="activeSection = 'tournaments'">
-      <i data-feather="award"></i> Tournaments ([[ tournaments.length ]])
+      <i data-feather="award"></i> Hosted Tournaments ([[ tournaments.length ]])
     </button>
     <button 
       type="button" 
       class="tc-btn tc-btn-sm" 
       :class="activeSection === 'subscriptions' ? 'tc-btn-primary' : 'tc-btn-outline'" 
       @click="activeSection = 'subscriptions'">
-      <i data-feather="repeat"></i> Subscription & Queue Manager
+      <i data-feather="repeat"></i> Subscription & Invoices
       <span v-if="pendingPayments.length > 0" class="badge badge-warning ml-1">[[ pendingPayments.length ]]</span>
     </button>
   </div>
 
-  <!-- 4A. Tournaments Management Section -->
+  <!-- 4A. Site Domains & Custom Domain Management Section -->
+  <div v-show="activeSection === 'domains'">
+    <div class="row g-4">
+      <!-- Domain Setting Form -->
+      <div class="col-lg-6 mb-4">
+        <div class="tc-card h-100">
+          <div class="tc-card-header">
+            <div class="d-flex align-items-center gap-2">
+              <i data-feather="globe" class="text-primary"></i>
+              <h3 class="tc-card-title">Custom Domain Configuration</h3>
+            </div>
+          </div>
+          <div class="tc-card-body">
+            <p class="small text-muted mb-3">
+              Connect your own custom branded domain (e.g. <code>debates.nsudc.org</code> or <code>tab.yourclub.com</code>) to your dedicated Tabbycat application.
+            </p>
+
+            <form method="post" action="{% url 'accounts:dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_domain">
+
+              <div class="mb-3">
+                <label class="font-weight-bold small mb-1">Organization Site Name</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  class="tc-search-input form-control" 
+                  placeholder="e.g. North South Debating Club" 
+                  v-model="tenant.name">
+              </div>
+
+              <div class="mb-3">
+                <label class="font-weight-bold small mb-1">Custom Domain Name (Field)</label>
+                <input 
+                  type="text" 
+                  name="custom_domain" 
+                  class="tc-search-input form-control" 
+                  placeholder="e.g. debates.nsudc.org" 
+                  v-model="tenant.custom_domain">
+                <small class="text-muted d-block mt-1">
+                  Enter your domain (e.g. <code>debates.nsudc.org</code>). Leave blank to use <code>[[ tenant.slug ]].[[ baseDomain ]]</code>.
+                </small>
+              </div>
+
+              <button type="submit" class="tc-btn tc-btn-primary font-weight-bold">
+                <i data-feather="save"></i> Save Custom Domain
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- DNS CNAME Instructions Card -->
+      <div class="col-lg-6 mb-4">
+        <div class="tc-card h-100">
+          <div class="tc-card-header">
+            <div class="d-flex align-items-center gap-2">
+              <i data-feather="server" class="text-primary"></i>
+              <h3 class="tc-card-title">DNS Setup Instructions</h3>
+            </div>
+          </div>
+          <div class="tc-card-body">
+            <p class="small text-muted mb-3">
+              To route your custom domain to Tabbycat, add a <strong>CNAME Record</strong> in your domain provider's DNS panel (e.g. Cloudflare, Namecheap, GoDaddy):
+            </p>
+
+            <div class="table-responsive mb-3">
+              <table class="table table-bordered table-sm small mb-0">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Type</th>
+                    <th>Name / Host</th>
+                    <th>Target / Value</th>
+                    <th>TTL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>CNAME</code></td>
+                    <td><code>[[ customDomainPrefix || 'debates' ]]</code></td>
+                    <td><code>[[ baseDomain ]]</code></td>
+                    <td>Automatic / 3600</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="p-3 bg-light rounded small border">
+              <strong>Site Access Points:</strong>
+              <ul class="mb-0 pl-3 mt-1 text-muted">
+                <li>Primary: <code>http://[[ tenant.slug ]].[[ baseDomain ]]</code></li>
+                <li v-if="tenant.custom_domain">Custom: <code>http://[[ tenant.custom_domain ]]</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4B. Site Admins & Permissions Section -->
+  <div v-show="activeSection === 'managers'">
+    <div class="row g-4">
+      <!-- Existing Managers List -->
+      <div class="col-lg-7 mb-4">
+        <div class="tc-card h-100">
+          <div class="tc-card-header">
+            <div class="d-flex align-items-center gap-2">
+              <i data-feather="shield" class="text-primary"></i>
+              <h3 class="tc-card-title">Site Administrators & Members</h3>
+            </div>
+          </div>
+          <div class="p-0">
+            <div v-for="m in memberships" :key="m.id" class="p-3 border-bottom d-flex justify-content-between align-items-center">
+              <div>
+                <div class="font-weight-bold text-dark">[[ m.username ]]</div>
+                <small class="text-muted">[[ m.email || 'No email' ]] &bull; Joined [[ m.joined_at ]]</small>
+              </div>
+              <div>
+                <span class="tc-badge tc-badge-primary">[[ m.role ]]</span>
+              </div>
+            </div>
+            <div v-if="memberships.length === 0" class="p-4 text-center text-muted">
+              No additional managers configured.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Manager Form -->
+      <div class="col-lg-5 mb-4">
+        <div class="tc-card h-100">
+          <div class="tc-card-header">
+            <div class="d-flex align-items-center gap-2">
+              <i data-feather="user-plus" class="text-primary"></i>
+              <h3 class="tc-card-title">Add Site Administrator</h3>
+            </div>
+          </div>
+          <div class="tc-card-body">
+            <p class="small text-muted mb-3">Grant user access to manage tournaments and operations for this site.</p>
+
+            <form method="post" action="{% url 'accounts:dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="add_manager">
+
+              <div class="mb-3">
+                <label class="font-weight-bold small mb-1">Username or Email *</label>
+                <input 
+                  type="text" 
+                  name="username_or_email" 
+                  class="tc-search-input form-control" 
+                  placeholder="Enter username or email" 
+                  required>
+              </div>
+
+              <div class="mb-3">
+                <label class="font-weight-bold small mb-1">Role *</label>
+                <select name="role" class="form-select custom-select tc-search-input w-100" required>
+                  <option value="admin">Site Administrator (Full Access)</option>
+                  <option value="member">Site Member / Staff</option>
+                </select>
+              </div>
+
+              <button type="submit" class="tc-btn tc-btn-primary w-100 font-weight-bold">
+                <i data-feather="plus-circle"></i> Grant Site Access
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4C. Tournaments Section -->
   <div v-show="activeSection === 'tournaments'" class="tc-card">
     <div class="tc-card-header flex-wrap gap-2">
       <div class="d-flex align-items-center gap-2">
         <i data-feather="award" class="text-primary"></i>
-        <h3 class="tc-card-title">Tournaments & Debates</h3>
-        <span class="tc-badge tc-badge-primary">[[ filteredTournaments.length ]] displayed</span>
+        <h3 class="tc-card-title">Hosted Tournaments</h3>
+        <span class="tc-badge tc-badge-primary">[[ tournaments.length ]] total</span>
       </div>
 
       <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-md-end" style="max-width: 500px;">
@@ -166,23 +352,6 @@
             v-model="searchQuery" 
             class="tc-search-input" 
             placeholder="Search tournament name or slug...">
-        </div>
-
-        <div class="tc-tabs">
-          <button 
-            type="button" 
-            class="tc-tab-item" 
-            :class="{ active: tabFilter === 'all' }" 
-            @click="tabFilter = 'all'">
-            All ([[ tournaments.length ]])
-          </button>
-          <button 
-            type="button" 
-            class="tc-tab-item" 
-            :class="{ active: tabFilter === 'active' }" 
-            @click="tabFilter = 'active'">
-            Live ([[ activeTournamentsCount ]])
-          </button>
         </div>
       </div>
     </div>
@@ -228,13 +397,7 @@
           </tr>
           <tr v-if="filteredTournaments.length === 0">
             <td colspan="5" class="text-center py-5 text-muted">
-              <div v-if="searchQuery">No tournaments match your search "[[ searchQuery ]]".</div>
-              <div v-else>
-                <p class="mb-2">No tournaments created yet in this organization.</p>
-                <a href="{% url 'tournament-create' %}" class="tc-btn tc-btn-primary tc-btn-sm">
-                  <i data-feather="plus"></i> Create First Tournament
-                </a>
-              </div>
+              No tournaments to display.
             </td>
           </tr>
         </tbody>
@@ -242,14 +405,13 @@
     </div>
   </div>
 
-  <!-- 4B. Subscription & Queue Manager Section -->
+  <!-- 4D. Subscription & Queue Manager Section -->
   <div v-show="activeSection === 'subscriptions'">
-    <!-- Subscription Detail Card -->
     <div class="tc-card mb-4">
       <div class="tc-card-header">
         <div class="d-flex align-items-center gap-2">
           <i data-feather="repeat" class="text-primary"></i>
-          <h3 class="tc-card-title">Subscription Overview & Entitlements</h3>
+          <h3 class="tc-card-title">Subscription Overview</h3>
         </div>
         <button type="button" class="tc-btn tc-btn-primary tc-btn-sm" @click="showUpgradeModal = true">
           <i data-feather="arrow-up-circle"></i> Upgrade / Renew Plan
@@ -261,24 +423,24 @@
             <div class="tc-stat-label">Active Plan</div>
             <div class="d-flex align-items-baseline gap-2">
               <span class="fs-4 font-weight-bold text-primary">[[ plan ? plan.name : 'Free Tier' ]]</span>
-              <span class="text-muted">৳[[ plan ? plan.price_bdt : 0 ]]/[[ plan ? plan.billing_period : 'period' ]]</span>
+              <span class="text-muted">৳[[ plan ? plan.price_bdt : 0 ]]/[[ plan ? plan.billing_period : 'lifetime' ]]</span>
             </div>
             <p class="text-muted small mt-1 mb-0">[[ plan ? plan.description : 'Standard access' ]]</p>
           </div>
           <div class="col-md-6 border-start-md">
             <div class="small">
               <div class="d-flex justify-content-between py-1 border-bottom">
-                <span class="text-muted">Subdomain:</span>
+                <span class="text-muted">Primary Subdomain:</span>
                 <code class="text-primary">[[ tenant.slug ]].[[ baseDomain ]]</code>
               </div>
               <div class="d-flex justify-content-between py-1 border-bottom">
                 <span class="text-muted">Subscription Status:</span>
                 <span v-if="subscription && subscription.status === 'active'" class="tc-badge tc-badge-success">Active</span>
                 <span v-else-if="subscription && subscription.status === 'pending'" class="tc-badge tc-badge-warning">Verification Pending</span>
-                <span v-else class="tc-badge">[[ subscription ? subscription.status : 'None' ]]</span>
+                <span v-else class="tc-badge tc-badge-success">Active</span>
               </div>
               <div class="d-flex justify-content-between py-1">
-                <span class="text-muted">Tournament Capacity:</span>
+                <span class="text-muted">Tournament Quota:</span>
                 <span><strong>[[ limits.max_tournaments ]]</strong> tournaments allowed</span>
               </div>
             </div>
@@ -292,7 +454,7 @@
       <div class="tc-card-header">
         <div class="d-flex align-items-center gap-2">
           <i data-feather="clock" class="text-primary"></i>
-          <h3 class="tc-card-title">Submitted Payment Verification Queue</h3>
+          <h3 class="tc-card-title">Submitted Payment Receipts</h3>
         </div>
         <a v-if="subscription" :href="'/billing/status/' + subscription.id + '/'" class="small font-weight-bold text-primary">
           Complete Transaction History ➔
@@ -343,7 +505,7 @@
     </div>
   </div>
 
-  <!-- 5. Interactive Upgrade / Renew Plan Modal -->
+  <!-- 5. Upgrade Plan Modal -->
   <div v-if="showUpgradeModal" class="tc-modal-backdrop" @click.self="showUpgradeModal = false">
     <div class="tc-modal-dialog" style="max-width: 620px;">
       <div class="tc-modal-header">
@@ -356,6 +518,7 @@
 
       <form method="post" action="{% url 'accounts:dashboard' %}">
         {% csrf_token %}
+        <input type="hidden" name="action" value="upgrade_plan">
         <div class="tc-modal-body">
           <p class="small text-muted mb-3">Choose the plan you wish to upgrade or renew for <strong>[[ tenant.name ]]</strong>:</p>
 
@@ -405,16 +568,16 @@
     delimiters: ['[[', ']]'],
     data() {
       return {
-        activeSection: 'tournaments',
+        activeSection: 'domains',
         searchQuery: '',
-        tabFilter: 'all',
         showUpgradeModal: false,
         selectedModalPlanId: {{ plan.id|default:'null' }},
         baseDomain: "{{ base_domain|escapejs }}",
+        port: window.location.port,
         tenant: {
           name: "{{ tenant.name|default:''|escapejs }}",
           slug: "{{ tenant.slug|default:''|escapejs }}",
-          is_active: {% if tenant.is_active %}true{% else %}false{% endif %},
+          is_active: {% if tenant and tenant.is_active %}true{% else %}true{% endif %},
           custom_domain: "{{ tenant.custom_domain|default:''|escapejs }}"
         },
         limits: {
@@ -435,6 +598,17 @@
           billing_period: "{{ plan.billing_period|escapejs }}",
           description: "{{ plan.description|escapejs }}"
         }{% else %}null{% endif %},
+        memberships: [
+          {% for m in memberships %}
+          {
+            id: {{ m.id }},
+            username: "{{ m.user.username|escapejs }}",
+            email: "{{ m.user.email|escapejs }}",
+            role: "{{ m.get_role_display|escapejs }}",
+            joined_at: "{{ m.joined_at|date:'M d, Y' }}"
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ],
         tournaments: [
           {% for t in tournaments %}
           {
@@ -477,8 +651,10 @@
       };
     },
     computed: {
-      activeTournamentsCount() {
-        return this.tournaments.filter(t => t.active).length;
+      customDomainPrefix() {
+        if (!this.tenant.custom_domain) return 'debates';
+        const parts = this.tenant.custom_domain.split('.');
+        return parts.length > 2 ? parts[0] : 'debates';
       },
       pendingPayments() {
         return this.payments.filter(p => p.status === 'pending');
@@ -493,10 +669,8 @@
       },
       filteredTournaments() {
         return this.tournaments.filter(t => {
-          const matchTab = this.tabFilter === 'all' || (this.tabFilter === 'active' && t.active);
           const q = this.searchQuery.toLowerCase().trim();
-          const matchQuery = !q || t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q);
-          return matchTab && matchQuery;
+          return !q || t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q);
         });
       }
     },

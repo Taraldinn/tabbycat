@@ -112,3 +112,25 @@ class SuperAdminPanelsTestCase(TestCase):
         self.payment.refresh_from_db()
         self.assertEqual(self.payment.status, Payment.Status.REJECTED)
         self.assertEqual(self.payment.rejection_reason, 'Transaction ID was not found in statement.')
+
+    def test_send_password_reset_email_success(self):
+        from django.core import mail
+        self.regular_user.email = 'joe@example.com'
+        self.regular_user.save()
+
+        self.client.login(username='admin_boss', password='AdminPassword123!')
+        res = self.client.post(reverse('superadmin:user-send-password-reset', kwargs={'pk': self.regular_user.pk}))
+        self.assertRedirects(res, reverse('superadmin:user-list'))
+        
+        # Verify email dispatched
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('joe@example.com', mail.outbox[0].to)
+
+    def test_send_password_reset_user_without_email(self):
+        self.regular_user.email = ''
+        self.regular_user.save()
+
+        self.client.login(username='admin_boss', password='AdminPassword123!')
+        res = self.client.post(reverse('superadmin:user-send-password-reset', kwargs={'pk': self.regular_user.pk}))
+        self.assertRedirects(res, reverse('superadmin:user-list'))
+

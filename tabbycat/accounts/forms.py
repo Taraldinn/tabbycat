@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from tenants.models import Tenant
+from tenants.models import Tenant, TenantMembership
 from tenants.validators import validate_tenant_slug
 from billing.models import Plan
 from .models import UserProfile
@@ -194,3 +194,104 @@ class UserProfileUpdateForm(forms.Form):
         profile.timezone = data.get('timezone', 'Asia/Dhaka')
         profile.save()
         return self.user
+
+
+class TenantDomainForm(forms.Form):
+    name = forms.CharField(
+        label=_("Organization Site Name"),
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'tc-search-input form-control',
+            'placeholder': 'e.g. North South Debating Club'
+        })
+    )
+    custom_domain = forms.CharField(
+        label=_("Custom Domain"),
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'tc-search-input form-control',
+            'placeholder': 'e.g. debates.nsudc.org'
+        })
+    )
+
+    def __init__(self, tenant, *args, **kwargs):
+        self.tenant = tenant
+        super().__init__(*args, **kwargs)
+        if tenant:
+            self.fields['name'].initial = tenant.name
+            self.fields['custom_domain'].initial = tenant.custom_domain or ''
+
+    def clean_custom_domain(self):
+        import re
+        domain = self.cleaned_data.get('custom_domain', '').strip().lower()
+        if not domain:
+            return None
+        # Remove http:// or https:// if user pasted URL
+        domain = re.sub(r'^https?://', '', domain).rstrip('/')
+        
+        # Validate domain format
+        domain_pattern = r'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$'
+        if not re.match(domain_pattern, domain):
+            raise ValidationError(_("Please enter a valid domain name, e.g. debates.myclub.org"))
+
+        # Check uniqueness
+        if self.tenant and Tenant.objects.filter(custom_domain__iexact=domain).exclude(pk=self.tenant.pk).exists():
+            raise ValidationError(_("Domain '%(domain)s' is already in use by another organization.") % {'domain': domain})
+
+        return domain
+
+    def save(self):
+        if not self.tenant:
+            return None
+        name = self.cleaned_data.get('name')
+        if name:
+            self.tenant.name = name
+        self.tenant.custom_domain = self.cleaned_data.get('custom_domain')
+        self.tenant.save()
+        return self.tenant
+
+
+class TenantManagerAddForm(forms.Form):
+    username_or_email = forms.CharField(
+        label=_("Username or Email"),
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'tc-search-input',
+            'placeholder': 'Enter username or email'
+        })
+    )
+    role = forms.ChoiceField(
+        label=_("Site Role"),
+        choices=[
+            (TenantMembership.Role.ADMIN, _('Site Administrator (Full Access)')),
+            (TenantMembership.Role.MEMBER, _('Site Member / Staff')),
+        ],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select custom-select tc-search-input'})
+    )
+
+    def __init__(self, tenant, *args, **kwargs):
+        self.tenant = tenant
+        super().__init__(*args, **kwargs)
+
+    def clean_username_or_email(self):
+        val = self.cleaned_data.get('username_or_email', '').strip()
+        user = User.objects.filter(username__iexact=val).first() or User.objects.filter(email__iexact=val).first()
+        if not user:
+            raise ValidationError(_("No user account found matching '%s'. Please ensure they have registered first.") % val)
+        if TenantMembership.objects.filter(tenant=self.tenant, user=user).exists():
+            raise ValidationError(_("User '%s' is already a manager/member of this organization site.") % user.username)
+        self.target_user = user
+        return val
+
+    def save(self):
+        role = self.cleaned_data.get('role')
+        return TenantMembership.objects.create(
+            tenant=self.tenant,
+            user=self.target_user,
+            role=role
+        )
+
