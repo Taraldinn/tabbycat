@@ -110,6 +110,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'tenants.middleware.TenantMiddleware',
+    'accounts.middleware.TimezoneMiddleware',
     'utils.middleware.DebateMiddleware',
 ]
 

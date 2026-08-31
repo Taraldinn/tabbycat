@@ -6,8 +6,34 @@ from django.utils.translation import gettext_lazy as _
 from tenants.models import Tenant
 from tenants.validators import validate_tenant_slug
 from billing.models import Plan
+from .models import UserProfile
 
 User = get_user_model()
+
+
+COMMON_TIMEZONES = [
+    ('Asia/Dhaka', 'Asia/Dhaka (GMT+6:00)'),
+    ('Asia/Kolkata', 'Asia/Kolkata (GMT+5:30)'),
+    ('Asia/Bangkok', 'Asia/Bangkok (GMT+7:00)'),
+    ('Asia/Singapore', 'Asia/Singapore (GMT+8:00)'),
+    ('Asia/Kuala_Lumpur', 'Asia/Kuala Lumpur (GMT+8:00)'),
+    ('Asia/Hong_Kong', 'Asia/Hong Kong (GMT+8:00)'),
+    ('Asia/Tokyo', 'Asia/Tokyo (GMT+9:00)'),
+    ('Asia/Seoul', 'Asia/Seoul (GMT+9:00)'),
+    ('Asia/Dubai', 'Asia/Dubai (GMT+4:00)'),
+    ('Europe/London', 'Europe/London (GMT+0 / GMT+1)'),
+    ('Europe/Paris', 'Europe/Paris (GMT+1 / GMT+2)'),
+    ('Europe/Berlin', 'Europe/Berlin (GMT+1 / GMT+2)'),
+    ('America/New_York', 'America/New York (Eastern Time)'),
+    ('America/Chicago', 'America/Chicago (Central Time)'),
+    ('America/Denver', 'America/Denver (Mountain Time)'),
+    ('America/Los_Angeles', 'America/Los Angeles (Pacific Time)'),
+    ('Australia/Sydney', 'Australia/Sydney (AEST)'),
+    ('Australia/Melbourne', 'Australia/Melbourne (AEST)'),
+    ('Australia/Perth', 'Australia/Perth (AWST)'),
+    ('Pacific/Auckland', 'Pacific/Auckland (NZST)'),
+    ('UTC', 'UTC (Coordinated Universal Time)'),
+]
 
 
 class UserRegistrationWithTenantForm(forms.Form):
@@ -107,3 +133,64 @@ class UserRegistrationWithTenantForm(forms.Form):
             self.add_error('confirm_password', _("Passwords do not match."))
 
         return cleaned_data
+
+
+class UserProfileUpdateForm(forms.Form):
+    first_name = forms.CharField(
+        label=_("First Name"),
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'tc-search-input', 'placeholder': 'First Name'})
+    )
+    last_name = forms.CharField(
+        label=_("Last Name"),
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'tc-search-input', 'placeholder': 'Last Name'})
+    )
+    email = forms.EmailField(
+        label=_("Email Address"),
+        required=True,
+        widget=forms.EmailInput(attrs={'class': 'tc-search-input', 'placeholder': 'Email Address'})
+    )
+    phone = forms.CharField(
+        label=_("Phone Number"),
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'tc-search-input', 'placeholder': '01XXXXXXXXX'})
+    )
+    timezone = forms.ChoiceField(
+        label=_("Preferred Timezone"),
+        choices=COMMON_TIMEZONES,
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select custom-select tc-search-input'})
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        self.fields['first_name'].initial = user.first_name
+        self.fields['last_name'].initial = user.last_name
+        self.fields['email'].initial = user.email
+        self.fields['phone'].initial = profile.phone
+        self.fields['timezone'].initial = profile.timezone or 'Asia/Dhaka'
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
+            raise ValidationError(_("This email is already in use by another user."))
+        return email
+
+    def save(self):
+        data = self.cleaned_data
+        self.user.first_name = data.get('first_name', '')
+        self.user.last_name = data.get('last_name', '')
+        self.user.email = data.get('email', '')
+        self.user.save()
+
+        profile, created = UserProfile.objects.get_or_create(user=self.user)
+        profile.phone = data.get('phone', '')
+        profile.timezone = data.get('timezone', 'Asia/Dhaka')
+        profile.save()
+        return self.user

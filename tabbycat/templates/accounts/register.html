@@ -105,15 +105,23 @@
           </div>
 
           <div class="row g-3">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-12 mb-3">
               <label class="font-weight-bold small mb-1">Mobile Phone (e.g. 01XXXXXXXXX) *</label>
               {{ form.phone }}
               {% if form.phone.errors %}<small class="text-danger d-block">{{ form.phone.errors.0 }}</small>{% endif %}
             </div>
+          </div>
+
+          <div class="row g-3">
             <div class="col-md-6 mb-3">
               <label class="font-weight-bold small mb-1">Password *</label>
               {{ form.password }}
               {% if form.password.errors %}<small class="text-danger d-block">{{ form.password.errors.0 }}</small>{% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="font-weight-bold small mb-1">Confirm Password *</label>
+              {{ form.confirm_password }}
+              {% if form.confirm_password.errors %}<small class="text-danger d-block">{{ form.confirm_password.errors.0 }}</small>{% endif %}
             </div>
           </div>
         </div>

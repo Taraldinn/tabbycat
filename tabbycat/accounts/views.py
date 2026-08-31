@@ -8,11 +8,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.views import View
 from django.views.generic import DetailView, FormView, TemplateView
 
-from billing.models import Plan, Subscription
+from billing.models import Payment, Plan, Subscription
 from tenants.models import Tenant, TenantMembership
-from .forms import UserRegistrationWithTenantForm
+from .forms import UserProfileUpdateForm, UserRegistrationWithTenantForm
 from .models import UserProfile
 
 User = get_user_model()
@@ -150,17 +151,21 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
 
         context['tenant'] = tenant
         context['base_domain'] = getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
+        context['all_plans'] = Plan.objects.filter(is_active=True).order_by('display_order', 'price_bdt')
 
         if tenant:
             tournaments = tenant.tournament_set.all().order_by('-id')
             subscription = getattr(tenant, 'subscription', None)
             plan = subscription.plan if subscription else None
+            payments = subscription.payments.all().order_by('-created_at') if subscription else []
 
             context['tournaments'] = tournaments
             context['tournaments_count'] = tournaments.count()
             context['active_tournaments_count'] = tournaments.filter(active=True).count()
             context['subscription'] = subscription
             context['plan'] = plan
+            context['payments'] = payments
+            context['pending_payments'] = [p for p in payments if p.status == Payment.Status.PENDING]
             context['max_tournaments'] = tenant.max_tournaments
             context['max_teams'] = tenant.max_teams_per_tournament
             context['max_adjudicators'] = tenant.max_adjudicators_per_tournament
@@ -170,20 +175,79 @@ class ClientDashboardView(LoginRequiredMixin, TemplateView):
             context['tournaments'] = []
             context['tournaments_count'] = 0
             context['active_tournaments_count'] = 0
+            context['subscription'] = None
+            context['plan'] = None
+            context['payments'] = []
+            context['pending_payments'] = []
 
         return context
 
+    def post(self, request, *args, **kwargs):
+        """Handle queue upgrade/plan change from the organizational portal"""
+        user = request.user
+        tenant = getattr(request, 'tenant', None) or Tenant.objects.filter(owner=user).first()
+        if not tenant:
+            messages.error(request, _("No organization found to update subscription."))
+            return redirect('accounts:dashboard')
 
-class UserProfileView(LoginRequiredMixin, TemplateView):
+        new_plan_id = request.POST.get('new_plan_id')
+        if not new_plan_id:
+            messages.error(request, _("Please select a valid plan."))
+            return redirect('accounts:dashboard')
+
+        plan = get_object_or_404(Plan, id=new_plan_id, is_active=True)
+        sub = getattr(tenant, 'subscription', None)
+        now = timezone.now()
+
+        if sub:
+            sub.plan = plan
+            sub.status = Subscription.Status.PENDING
+            sub.save()
+        else:
+            sub = Subscription.objects.create(
+                tenant=tenant,
+                plan=plan,
+                status=Subscription.Status.PENDING,
+                started_at=now,
+                current_period_start=now,
+                current_period_end=now
+            )
+
+        messages.info(request, _("Plan '%s' selected! Please complete the verification payment.") % plan.name)
+        return redirect('billing:checkout', subscription_id=sub.id)
+
+
+class UserProfileView(LoginRequiredMixin, View):
     template_name = 'accounts/profile.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        profile, _ = UserProfile.objects.get_or_create(user=user)
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        form = UserProfileUpdateForm(user=user)
         memberships = TenantMembership.objects.filter(user=user).select_related('tenant')
 
-        context['user_profile'] = profile
-        context['memberships'] = memberships
-        return context
+        return render(request, self.template_name, {
+            'user_profile': profile,
+            'form': form,
+            'memberships': memberships,
+            'current_timezone': profile.timezone or 'Asia/Dhaka',
+        })
 
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        form = UserProfileUpdateForm(user=user, data=request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Your profile and timezone preferences have been updated successfully!"))
+            return redirect('accounts:profile')
+        else:
+            memberships = TenantMembership.objects.filter(user=user).select_related('tenant')
+            messages.error(request, _("Please correct the errors below."))
+            return render(request, self.template_name, {
+                'user_profile': profile,
+                'form': form,
+                'memberships': memberships,
+                'current_timezone': profile.timezone or 'Asia/Dhaka',
+            })

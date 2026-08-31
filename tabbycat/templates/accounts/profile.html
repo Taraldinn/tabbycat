@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block page-title %}{% trans "User Profile & Settings" %}{% endblock %}
+{% block page-title %}{% trans "User Profile & Timezone Settings" %}{% endblock %}
 
 {% block extra-head %}
 <link rel="stylesheet" href="{% static 'css/modern_compact_ui.css' %}">
@@ -11,23 +11,23 @@
 {% block body-class %}tc-modern-body{% endblock %}
 
 {% block content %}
-<div id="userProfileApp" class="container py-4" style="max-width: 860px;">
+<div id="userProfileApp" class="container py-4" style="max-width: 920px;">
   <!-- Header -->
   <div class="tc-header mb-4">
     <div>
-      <h1 class="tc-header-title">Account Settings</h1>
-      <p class="tc-header-subtitle">Manage personal identity, organization memberships, and tournament affiliations</p>
+      <h1 class="tc-header-title">Account & Regional Settings</h1>
+      <p class="tc-header-subtitle">Manage personal identity, timezone preferences, and organization access</p>
     </div>
-    <div>
-      <a href="{% url 'accounts:dashboard' %}" class="tc-btn tc-btn-primary tc-btn-sm">
+    <div class="d-flex gap-2">
+      <a href="{% url 'accounts:dashboard' %}" class="tc-btn tc-btn-outline tc-btn-sm">
         <i data-feather="grid"></i> Organization Portal
       </a>
     </div>
   </div>
 
   <div class="row g-4">
-    <!-- Left Column: User Profile Card -->
-    <div class="col-md-5 mb-4">
+    <!-- Left Column: User Summary Card -->
+    <div class="col-lg-4 col-md-5 mb-4">
       <div class="tc-card text-center p-4">
         <div class="mb-3 d-inline-block position-relative">
           <div style="width: 72px; height: 72px; border-radius: 50%; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 800; margin: 0 auto; border: 2px solid #c7d2fe;">
@@ -40,36 +40,108 @@
 
         <div class="d-flex justify-content-center gap-2 mb-3">
           <span v-if="user.is_staff" class="tc-badge tc-badge-danger">Staff / SuperAdmin</span>
-          <span class="tc-badge tc-badge-success">Verified Member</span>
+          <span class="tc-badge tc-badge-success">Verified Account</span>
         </div>
 
         <div class="border-top pt-3 text-left small">
           <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">Current Timezone:</span>
+            <strong class="text-primary">[[ user.timezone ]]</strong>
+          </div>
+          <div class="d-flex justify-content-between py-1">
             <span class="text-muted">Email:</span>
-            <strong class="text-dark">[[ user.email || 'None' ]]</strong>
+            <span class="text-dark font-weight-bold">[[ user.email || 'None' ]]</span>
           </div>
           <div class="d-flex justify-content-between py-1">
             <span class="text-muted">Phone:</span>
-            <strong class="text-dark">[[ user.phone || 'Not set' ]]</strong>
+            <span class="text-dark font-weight-bold">[[ user.phone || 'Not set' ]]</span>
           </div>
           <div class="d-flex justify-content-between py-1">
-            <span class="text-muted">Member Since:</span>
+            <span class="text-muted">Joined:</span>
             <span>[[ user.date_joined ]]</span>
           </div>
         </div>
       </div>
+
+      <!-- Security & Password Card -->
+      <div class="tc-card p-3 text-center">
+        <h6 class="font-weight-bold mb-2">Password & Security</h6>
+        <p class="small text-muted mb-3">Update your password or manage credentials.</p>
+        <a href="{% url 'password_change' %}" class="tc-btn tc-btn-outline tc-btn-sm w-100 font-weight-bold">
+          <i data-feather="lock"></i> Change Password
+        </a>
+      </div>
     </div>
 
-    <!-- Right Column: Organizations & Affiliations -->
-    <div class="col-md-7 mb-4">
-      <!-- Organization Memberships -->
+    <!-- Right Column: Settings & Timezone Form -->
+    <div class="col-lg-8 col-md-7 mb-4">
+      
+      <!-- Profile & Timezone Form -->
       <div class="tc-card mb-4">
+        <div class="tc-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <i data-feather="sliders" class="text-primary"></i>
+            <h3 class="tc-card-title">Personal Profile & Timezone</h3>
+          </div>
+        </div>
+        <div class="tc-card-body">
+          <form method="post" action="{% url 'accounts:profile' %}">
+            {% csrf_token %}
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6 mb-3">
+                <label class="font-weight-bold small mb-1">First Name</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}<small class="text-danger d-block">{{ form.first_name.errors.0 }}</small>{% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="font-weight-bold small mb-1">Last Name</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}<small class="text-danger d-block">{{ form.last_name.errors.0 }}</small>{% endif %}
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6 mb-3">
+                <label class="font-weight-bold small mb-1">Email Address *</label>
+                {{ form.email }}
+                {% if form.email.errors %}<small class="text-danger d-block">{{ form.email.errors.0 }}</small>{% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="font-weight-bold small mb-1">Mobile Phone (e.g. 01XXXXXXXXX)</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}<small class="text-danger d-block">{{ form.phone.errors.0 }}</small>{% endif %}
+              </div>
+            </div>
+
+            <!-- Timezone Selection -->
+            <div class="mb-4">
+              <label class="font-weight-bold small mb-1 d-flex justify-content-between">
+                <span>Preferred Tournament Timezone *</span>
+                <span class="text-muted font-weight-normal">Times will display in this zone</span>
+              </label>
+              {{ form.timezone }}
+              {% if form.timezone.errors %}<small class="text-danger d-block">{{ form.timezone.errors.0 }}</small>{% endif %}
+              <small class="text-muted d-block mt-1">
+                Selected timezone: <code>[[ user.timezone ]]</code>. All round schedules, motions, and debate start times will format accordingly.
+              </small>
+            </div>
+
+            <button type="submit" class="tc-btn tc-btn-primary py-2 px-4 font-weight-bold">
+              <i data-feather="save"></i> Save Settings
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Organization Memberships -->
+      <div class="tc-card">
         <div class="tc-card-header">
           <div class="d-flex align-items-center gap-2">
             <i data-feather="briefcase" class="text-primary"></i>
             <h3 class="tc-card-title">Associated Organizations</h3>
           </div>
-          <a href="{% url 'accounts:register' %}" class="tc-btn tc-btn-outline tc-btn-sm">+ New Club</a>
+          <a href="{% url 'accounts:register' %}" class="tc-btn tc-btn-outline tc-btn-sm">+ New Organization</a>
         </div>
         <div class="p-0">
           <div v-for="m in memberships" :key="m.id" class="p-3 border-bottom d-flex justify-content-between align-items-center">
@@ -88,21 +160,6 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="tc-card">
-        <div class="tc-card-header">
-          <div class="d-flex align-items-center gap-2">
-            <i data-feather="shield" class="text-primary"></i>
-            <h3 class="tc-card-title">Security & Credentials</h3>
-          </div>
-        </div>
-        <div class="tc-card-body">
-          <p class="small text-muted mb-3">Manage passwords, authentication credentials, and active session tokens.</p>
-          <a href="{% url 'password_change' %}" class="tc-btn tc-btn-outline tc-btn-sm">
-            <i data-feather="lock"></i> Change Password
-          </a>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -120,6 +177,7 @@
           initials: "{{ request.user.username|slice:':2'|upper }}",
           email: "{{ request.user.email|escapejs }}",
           phone: "{{ user_profile.phone|default:''|escapejs }}",
+          timezone: "{{ current_timezone|default:'Asia/Dhaka'|escapejs }}",
           is_staff: {% if request.user.is_staff %}true{% else %}false{% endif %},
           date_joined: "{{ request.user.date_joined|date:'M Y' }}"
         },
@@ -136,6 +194,12 @@
       };
     },
     mounted() {
+      const tzSelect = document.getElementById('id_timezone');
+      if (tzSelect) {
+        tzSelect.addEventListener('change', (e) => {
+          this.user.timezone = e.target.value;
+        });
+      }
       if (typeof feather !== 'undefined') {
         feather.replace();
       }
