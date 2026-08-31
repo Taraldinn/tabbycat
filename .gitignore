@@ -4,8 +4,15 @@ tabbycat/settings/local.py
 tabbycat/settings/development.py
 .gitmodules/
 __pycache__/
+*.py[cod]
+*$py.class
 
-# Compilation
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Compilation & Static Assets
 tabbycat/staticfiles/
 tabbycat/static/css/
 tabbycat/static/js/
@@ -13,11 +20,24 @@ tabbycat/static/jsi18n/
 tabbycat/static/vue/
 tabbycat/static/fonts/
 
+# Frontend (Next.js & Node)
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.turbo/
+frontend/.npm/
+frontend/.pnp
+frontend/.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+.stylelintcache
+
 # Translations
 .tx/
-
-# Dependencies
-node_modules
 
 # Docker
 dbdata
@@ -27,58 +47,54 @@ docs/site/
 docs/.doctrees/
 issues-*.html
 
-# Tags
+# Tags & Editors
 tags
-
-env/
-venv/
-venv-*/
-*.pyc
+.DS_Store
+Thumbs.db
+.debug
+.idea/
+.vscode/
+.agents/
 *.swp
 *~
 *.db
-.DS_Store
-.debug
-.eslintcache
 
-# C extensions
+# Python Environments & Packages
+env/
+venv/
+venv-*/
+.venv/
 *.so
-
-# Packages
 *.egg
-*.egg-info
-dist
-build
-eggs
-parts
-var
-sdist
-develop-eggs
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
 .installed.cfg
-lib
-lib64
+lib/
+lib64/
 
-# Installer logs
+# Installer logs & Test Reports
 pip-log.txt
-
-# Unit test / coverage reports
+pip-delete-this-directory.txt
 .coverage
-.tox
+.coverage.*
+.tox/
 nosetests.xml
+coverage.xml
+htmlcov/
 
-# Translations
-# Include these because they can't be compiled on Heroku
-# *.mo
-
-# Mr Developer
+# Mr Developer & Logs
 .mr.developer.cfg
 *.log
 *.pot
-*.pyc
 
-# Python 2to3 backup files
+# Python backup files
 *.bak
-/.stylelintcache
 
 # Redis
 dump.rdb
