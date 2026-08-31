@@ -8,6 +8,7 @@ from django.utils import timezone
 from billing.models import Plan, Subscription, Payment
 from tenants.models import Tenant, TenantMembership
 from accounts.models import UserProfile
+from tournaments.models import Tournament
 
 User = get_user_model()
 
@@ -230,6 +231,7 @@ class ClientDashboardAndQueueTestCase(TestCase):
             current_period_start=timezone.now(),
             current_period_end=timezone.now() + timedelta(days=30)
         )
+        self.tournament = Tournament.objects.create(name="IUB IV", slug="iub-iv", tenant=self.tenant)
         self.client = Client()
         self.client.login(username='org_admin', password='TestPassword123!')
 
@@ -309,4 +311,29 @@ class ClientDashboardAndQueueTestCase(TestCase):
         res = self.client.post(reverse('accounts:dashboard'), payload)
         self.assertRedirects(res, reverse('accounts:dashboard'))
         self.assertEqual(TenantMembership.objects.filter(tenant=self.tenant).count(), 1)
+
+    def test_all_dashboard_button_links_and_destinations(self):
+        # 1. Dashboard loads with 200 OK
+        res = self.client.get(reverse('accounts:dashboard'))
+        self.assertEqual(res.status_code, 200)
+
+        # 2. Checkout link for active subscription loads 200 OK
+        res_checkout = self.client.get(reverse('billing:checkout', kwargs={'subscription_id': self.sub.id}))
+        self.assertEqual(res_checkout.status_code, 200)
+        self.assertContains(res_checkout, 'Payment & Plan Activation')
+
+        # 3. Status link loads 200 OK
+        res_status = self.client.get(reverse('billing:status', kwargs={'subscription_id': self.sub.id}))
+        self.assertEqual(res_status.status_code, 200)
+        self.assertContains(res_status, 'Subscription Overview')
+
+        # 4. Tournament public page loads or redirects properly on tenant host
+        host = f"{self.tenant.slug}.tabbycatbd.com"
+        res_tournament = self.client.get(f"/{self.tournament.slug}/", HTTP_HOST=host)
+        self.assertIn(res_tournament.status_code, [200, 302])
+
+        # 5. Tournament admin page loads or redirects properly for authenticated user on tenant host
+        res_tournament_admin = self.client.get(f"/{self.tournament.slug}/admin/", HTTP_HOST=host)
+        self.assertIn(res_tournament_admin.status_code, [200, 302])
+
 

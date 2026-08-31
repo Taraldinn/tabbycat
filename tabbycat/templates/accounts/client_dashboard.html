@@ -22,7 +22,7 @@
         <span v-else class="tc-badge tc-badge-warning">Pending Payment Verification</span>
       </div>
       <div class="tc-header-subtitle d-flex align-items-center gap-2 flex-wrap mt-1">
-        <span>Primary Subdomain: <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/'" target="_blank" class="font-weight-bold text-primary"><code>[[ tenant.slug ]].[[ baseDomain ]]</code> ↗</a></span>
+        <span>Primary Subdomain: <a :href="launchSiteUrl" target="_blank" class="font-weight-bold text-primary"><code>[[ tenant.slug ]].[[ baseDomain ]]</code> ↗</a></span>
         <span v-if="tenant.custom_domain" class="d-inline-flex align-items-center gap-1">
           &bull; Custom Domain: <a :href="'http://' + tenant.custom_domain + (port ? ':' + port : '') + '/'" target="_blank" class="tc-badge tc-badge-info text-decoration-none"><code>[[ tenant.custom_domain ]]</code> ↗</a>
         </span>
@@ -31,13 +31,13 @@
     </div>
     
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/'" target="_blank" class="tc-btn tc-btn-primary">
+      <a :href="launchSiteUrl" target="_blank" class="tc-btn tc-btn-primary mr-2 mb-1">
         <i data-feather="external-link"></i> Launch Core App Site
       </a>
-      <a :href="'http://' + tenant.slug + '.' + baseDomain + (port ? ':' + port : '') + '/admin/'" target="_blank" class="tc-btn tc-btn-outline">
+      <a :href="adminSiteUrl" target="_blank" class="tc-btn tc-btn-outline mr-2 mb-1">
         <i data-feather="shield"></i> Site Admin Console
       </a>
-      <button type="button" class="tc-btn tc-btn-outline" @click="showUpgradeModal = true">
+      <button type="button" class="tc-btn tc-btn-outline mb-1" @click="showUpgradeModal = true">
         <i data-feather="repeat"></i> Upgrade / Renew
       </button>
     </div>
@@ -130,7 +130,7 @@
   </div>
 
   <!-- 3. Navigation View Switcher Tabs -->
-  <div class="d-flex gap-2 mb-3 border-bottom pb-2 flex-wrap">
+  <div class="tc-nav-tabs-row mb-3 border-bottom pb-2">
     <button 
       type="button" 
       class="tc-btn tc-btn-sm" 
@@ -411,11 +411,11 @@
               <span v-else class="tc-badge" style="background: #f1f5f9; color: #475569;">Concluded</span>
             </td>
             <td class="text-right">
-              <div class="d-inline-flex gap-2">
-                <a :href="'/' + t.slug + '/'" class="tc-btn tc-btn-outline tc-btn-sm" target="_blank" title="Public Tab">
+              <div class="tc-actions-cell">
+                <a :href="getTournamentPublicUrl(t)" class="tc-btn tc-btn-outline tc-btn-sm" target="_blank" title="Public Tab">
                   <i data-feather="globe"></i> Public
                 </a>
-                <a :href="'/' + t.slug + '/admin/'" class="tc-btn tc-btn-primary tc-btn-sm font-weight-bold" title="Administration Room">
+                <a :href="getTournamentAdminUrl(t)" class="tc-btn tc-btn-primary tc-btn-sm font-weight-bold" target="_blank" title="Administration Room">
                   <i data-feather="settings"></i> Manage
                 </a>
               </div>
@@ -576,7 +576,7 @@
         </div>
 
         <div class="tc-modal-footer">
-          <button type="button" class="tc-btn tc-btn-outline tc-btn-sm" @click="showUpgradeModal = false">Cancel</button>
+          <button type="button" class="tc-btn tc-btn-outline tc-btn-sm mr-2" @click="showUpgradeModal = false">Cancel</button>
           <button type="submit" class="tc-btn tc-btn-primary tc-btn-sm font-weight-bold">
             <i data-feather="check-circle"></i> Proceed to Payment & Verification
           </button>
@@ -677,6 +677,12 @@
       };
     },
     computed: {
+      launchSiteUrl() {
+        return window.location.protocol + '//' + this.getTenantBaseHost() + '/';
+      },
+      adminSiteUrl() {
+        return window.location.protocol + '//' + this.getTenantBaseHost() + '/admin/';
+      },
       customDomainPrefix() {
         if (!this.tenant.custom_domain) return 'debates';
         const parts = this.tenant.custom_domain.split('.');
@@ -698,6 +704,24 @@
           const q = this.searchQuery.toLowerCase().trim();
           return !q || t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q);
         });
+      }
+    },
+    methods: {
+      getTenantBaseHost() {
+        if (this.tenant.custom_domain) {
+          return this.tenant.custom_domain + (this.port ? ':' + this.port : '');
+        }
+        const hostname = window.location.hostname;
+        if (hostname.includes('localhost') || hostname === '127.0.0.1') {
+          return (this.tenant.slug || 'duds') + '.localhost' + (this.port ? ':' + this.port : '');
+        }
+        return (this.tenant.slug || 'duds') + '.' + this.baseDomain + (this.port ? ':' + this.port : '');
+      },
+      getTournamentPublicUrl(t) {
+        return window.location.protocol + '//' + this.getTenantBaseHost() + '/' + t.slug + '/';
+      },
+      getTournamentAdminUrl(t) {
+        return window.location.protocol + '//' + this.getTenantBaseHost() + '/' + t.slug + '/admin/';
       }
     },
     mounted() {

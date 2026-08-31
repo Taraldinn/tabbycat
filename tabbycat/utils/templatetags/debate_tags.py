@@ -42,15 +42,21 @@ def version(path_string, base_url=settings.MEDIA_URL):
 
 @register.simple_tag(takes_context=True)
 def tournament_side_names(context, name_type):
-    side_names = [get_side_name(context['tournament'], DebateSide.AFF, name_type),
-                  get_side_name(context['tournament'], DebateSide.NEG, name_type)]
+    tournament = context.get('tournament') or getattr(context.get('request'), 'tournament', None)
+    if not tournament:
+        return ['', '']
+    side_names = [get_side_name(tournament, DebateSide.AFF, name_type),
+                  get_side_name(tournament, DebateSide.NEG, name_type)]
     return side_names
 
 
 @register.simple_tag(takes_context=True)
 def debate_team_side_name(context, debate_team):
+    tournament = context.get('tournament') or getattr(context.get('request'), 'tournament', None)
+    if not tournament:
+        return ''
     # If returned directly from the object it will have to lookup tournament
-    return debate_team.get_side_name(context['tournament'])
+    return debate_team.get_side_name(tournament)
 
 
 class TournamentURLNode(URLNode):
@@ -64,17 +70,33 @@ class TournamentURLNode(URLNode):
         """Add the tournament in the context to the arguments, then render as
         usual."""
 
-        # In order to take advantage of the superclass's method, the easiest
-        # thing to do is to grab the string we want to insert, and turn it into
-        # a (literal) Variable for the superclass. This is a little roundabout,
-        # since we're creating a variable only for it to be turned back into
-        # the string again, but it's better than copy-pasting the superclass's
-        # method itself.
-        try:
-            tournament_slug = context['tournament'].slug
-        except KeyError:
-            raise TemplateSyntaxError("tournamenturl can only be used in contexts with a tournament rtf ")
-        tournament_slug = Variable("'" + tournament_slug + "'")
+        tournament_slug = None
+        t = context.get('tournament') or getattr(context.get('request'), 'tournament', None) or getattr(context.get('view'), 'tournament', None)
+        if t and hasattr(t, 'slug'):
+            tournament_slug = t.slug
+        elif 'tournament_slug' in context and context['tournament_slug']:
+            tournament_slug = str(context['tournament_slug'])
+        elif 'request' in context:
+            req = context['request']
+            if hasattr(req, 'resolver_match') and req.resolver_match and 'tournament_slug' in req.resolver_match.kwargs:
+                tournament_slug = req.resolver_match.kwargs['tournament_slug']
+        
+        if not tournament_slug and 'view' in context:
+            view = context['view']
+            if hasattr(view, 'kwargs') and 'tournament_slug' in view.kwargs:
+                tournament_slug = view.kwargs['tournament_slug']
+
+        if not tournament_slug:
+            req = context.get('request')
+            if req and hasattr(req, 'path') and req.path:
+                parts = [p for p in req.path.strip('/').split('/') if p]
+                if parts and parts[0] not in ('accounts', 'superadmin', 'billing', 'api', 'database', 'jet', 'summernote', 'admin', 'static', 'media'):
+                    tournament_slug = parts[0]
+
+        if not tournament_slug:
+            raise TemplateSyntaxError("tournamenturl can only be used in contexts with a tournament")
+
+        tournament_slug = Variable("'" + str(tournament_slug) + "'")
         self.args = list(self._args)      # make a copy in case render() gets called multiple times
         self.kwargs = dict(self._kwargs)
 
@@ -115,9 +137,18 @@ class RoundURLNode(URLNode):
         """Add the round to the arguments, then render as usual."""
 
         # Similar comment as for TournamentURLNode.render()
-        round = self.round.resolve(context) if self.round else context['round']
-        tournament_slug = Variable("'" + round.tournament.slug + "'")
-        round_seq = Variable("'%d'" % round.seq)
+        round = self.round.resolve(context) if self.round else context.get('round')
+        if not round or isinstance(round, str):
+            t = context.get('tournament') or getattr(context.get('request'), 'tournament', None)
+            if t and getattr(t, 'current_round', None):
+                round = t.current_round
+            else:
+                return '#'
+        try:
+            tournament_slug = Variable("'" + round.tournament.slug + "'")
+            round_seq = Variable("'%d'" % round.seq)
+        except AttributeError:
+            return '#'
         self.args = list(self._args)      # make a copy in case render() gets called multiple times
         self.kwargs = dict(self._kwargs)
 
@@ -254,4 +285,8 @@ def prep_time():
 @register.simple_tag(takes_context=True)
 def haspermission(context, permission):
     # If returned directly from the object it will have to lookup tournament
-    return has_permission(context['user'], permission, context['tournament'])
+    tournament = context.get('tournament') or getattr(context.get('request'), 'tournament', None)
+    user = context.get('user') or getattr(context.get('request'), 'user', None)
+    if not tournament or not user:
+        return False
+    return has_permission(user, permission, tournament)

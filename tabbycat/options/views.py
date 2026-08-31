@@ -77,6 +77,11 @@ class TournamentPreferenceFormView(AdministratorMixin, LogActionMixin, Tournamen
         form_class = tournament_preference_form_builder(instance=self.tournament, section=section)
         return form_class
 
+    def get_context_data(self, **kwargs):
+        kwargs['tournament'] = self.tournament
+        kwargs['tournament_slug'] = self.tournament.slug
+        return super().get_context_data(**kwargs)
+
 
 class SetPresetPreferencesView(AdministratorMixin, LogActionMixin, TournamentMixin, FormView):
     template_name = "preset_edit.html"

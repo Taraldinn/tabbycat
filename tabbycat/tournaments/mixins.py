@@ -72,7 +72,10 @@ class TournamentFromUrlMixin:
 
         # and if it was in neither place, retrieve the object
         tenant = getattr(request, 'tenant', None) if request else None
-        tournament = get_object_or_404(Tournament, slug=slug, tenant=tenant)
+        if tenant:
+            tournament = get_object_or_404(Tournament, slug=slug, tenant=tenant)
+        else:
+            tournament = get_object_or_404(Tournament, slug=slug)
         cache.set(key, tournament, None)
         self._tournament_from_url = tournament
         return tournament
