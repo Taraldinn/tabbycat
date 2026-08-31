@@ -1,133 +1,127 @@
 {% load debate_tags static i18n cache %}
 {% get_current_language as LANGUAGE_CODE %}
 
-{% cache 600 footer tournament LANGUAGE_CODE %}
-<div class="row mt-3">
+<footer class="border-top mt-5" style="background: #0f172a; color: #94a3b8; font-size: 0.825rem; letter-spacing: -0.01em;">
+  <div class="container py-5" style="max-width: 1240px;">
+    <div class="row g-4 mb-4">
+      
+      <!-- Col 1: Platform & Fork Information -->
+      <div class="col-lg-4 col-md-6 mb-4 mb-lg-0">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          {% include "nav/logo.html" with width=24 height=24 alt="Tabbycat" %}
+          <span class="fs-6 font-weight-bold text-white">Tabbycat Platform</span>
+        </div>
+        
+        <p class="text-muted leading-relaxed mb-3" style="line-height: 1.6;">
+          Tabbycat is an open-source debate tabulation software originally created and maintained by the 
+          <strong class="text-light">Tabbycat Debate Association</strong> 
+          (forked from <a href="https://github.com/TabbycatDebate/tabbycat" target="_blank" rel="noopener" class="text-primary font-weight-bold">github.com/TabbycatDebate/tabbycat</a>).
+        </p>
 
-  <div class="navbar navbar-light container-fluid small">
-
-    <div class="row mt-3 mb-2">
-
-      <div class="col-lg-6 col-md-5">
-        <h6 class="d-inline-block">
-          {% if tournament and tabbycat_codename %}
-            {% blocktrans trimmed %}{{ tournament }} runs on Tabbycat {{ tabbycat_version }} ({{ tabbycat_codename }}) {% endblocktrans %}
-          {% else %}
-            {% blocktrans trimmed %}This site runs on Tabbycat {{ tabbycat_version }} ({{ tabbycat_codename }}) {% endblocktrans %}
-          {% endif %}
-        </h6>
-        <p class="text-muted">
-          {% blocktrans trimmed %}
-            Tabbycat is an open-source project developed by volunteers and is free to use.
-          {% endblocktrans %}
-          {% if tournament and tournament.billable_teams > 0 %}
-            {% blocktrans trimmed with amount=tournament.billable_teams %}
-              For a tournament of this size, we suggest <a href="https://opencollective.com/tabbycat/contribute/licensing-29466/checkout?amount={{ amount }}">a donation of <strong>${{ amount }}</strong></a>.
-            {% endblocktrans %}
-            <a href="https://opencollective.com/tabbycat">
-              {% trans "Learn more about donating." %}
-            </a>
-          {% else %}
-            {% blocktrans trimmed %}
-              <a href="https://opencollective.com/tabbycat">Donations to Tabbycat from individuals or organisations</a> are much appreciated and help us to continue to develop, support, and maintain Tabbycat.
-            {% endblocktrans %}
-          {% endif %}
+        <p class="text-muted small mb-0" style="line-height: 1.5;">
+          Extended with multi-tenancy subdomain portals, automated subscription billing, payment verification hubs, and enterprise admin telemetry.
         </p>
       </div>
 
-      <div class="col-lg-4 col-md-4 mt-2 mt-md-0">
-        <h6 class="d-inline-block">{% blocktrans trimmed %}Still timing debates with the stopwatch app?{% endblocktrans %}</h6>
-        <p class="text-muted">
-          {% blocktrans trimmed %}
-            Using an app designed for debate timekeeping makes speaking and adjudicating easier!
-            Check out <a href="https://itunes.apple.com/app/apple-store/id1156065589?pt=814172&ct=Tabbycat%20Installs&mt=8">Timekept</a> (iPhone/iPad)
-            or <a href="https://play.google.com/store/apps/details?id=net.czlee.debatekeeper&referrer=utm_source%3Dtabbycat%26utm_medium%3Dfooter">Debatekeeper</a> (Android).
-          {% endblocktrans %}
-        </p>
+      <!-- Col 2: Navigation & Portals -->
+      <div class="col-lg-2 col-md-3 col-6 mb-4 mb-md-0">
+        <div class="text-uppercase small font-weight-bold text-white mb-3" style="letter-spacing: 0.05em;">Platform</div>
+        <ul class="list-unstyled mb-0" style="line-height: 2;">
+          <li><a href="{% url 'landing:features' %}" class="text-muted text-decoration-none">Features</a></li>
+          <li><a href="{% url 'landing:pricing' %}" class="text-muted text-decoration-none">Pricing Plans</a></li>
+          <li><a href="{% url 'accounts:register' %}" class="text-muted text-decoration-none">Create Portal</a></li>
+          <li><a href="{% url 'accounts:dashboard' %}" class="text-muted text-decoration-none">Organization Hub</a></li>
+          <li><a href="{% url 'login' %}" class="text-muted text-decoration-none">User Sign In</a></li>
+        </ul>
       </div>
 
-      <div class="col-lg-2 col-md-3 mt-2 mt-md-0">
-        <h6 class="d-inline-block">{% blocktrans trimmed %}Our Organisation{% endblocktrans %}</h6>
-        <p class="text-muted">
-          {% blocktrans trimmed %}
-            Tabbycat is supported by the <a href="https://tabbycat-debate.org/">Tabbycat Debate Association</a>, a non-profit for advancing open debate technology.
-          {% endblocktrans %}
-        </p>
+      <!-- Col 3: Formats & Algorithms -->
+      <div class="col-lg-3 col-md-3 col-6 mb-4 mb-md-0">
+        <div class="text-uppercase small font-weight-bold text-white mb-3" style="letter-spacing: 0.05em;">Debate Engine</div>
+        <ul class="list-unstyled mb-0" style="line-height: 2;">
+          <li><span class="text-muted">British Parliamentary (BP)</span></li>
+          <li><span class="text-muted">Australs (3-on-3) Format</span></li>
+          <li><span class="text-muted">Hungarian Matchmaker</span></li>
+          <li><span class="text-muted">Private e-Ballot URLs</span></li>
+          <li><span class="text-muted">ESL & Novice Break Rules</span></li>
+        </ul>
       </div>
 
-     <div class="w-100"></div>
-
-      <div class="col mt-2">
-        <ul class="nav justify-content-center">
-          <li class="nav-item p-2">
-            <i data-feather="globe"></i>
-            <a class="nav-link p-0 d-inline-block" href="#" data-toggle="modal" data-target="#setLanguageModal">
-              {% trans "Language" as local_language_label %}
-              Language {% if LANGUAGE_CODE != 'en' and local_language_label != "Language" %} / {{ local_language_label }}{% endif %}
+      <!-- Col 4: Upstream & Community -->
+      <div class="col-lg-3 col-md-12">
+        <div class="text-uppercase small font-weight-bold text-white mb-3" style="letter-spacing: 0.05em;">Community & Docs</div>
+        <ul class="list-unstyled mb-0" style="line-height: 2;">
+          <li>
+            <a href="https://github.com/TabbycatDebate/tabbycat" target="_blank" rel="noopener" class="text-muted text-decoration-none d-flex align-items-center gap-1">
+              <i data-feather="github" style="width: 14px; height: 14px;"></i> Upstream Repository ↗
             </a>
           </li>
-          <li class="nav-item p-2">
-            <i data-feather="github"></i>
-            <a class="nav-link p-0 d-inline-block" href="https://github.com/TabbycatDebate/tabbycat/">
-              {% trans "GitHub" %}
+          <li>
+            <a href="https://tabbycat.readthedocs.io/" target="_blank" rel="noopener" class="text-muted text-decoration-none d-flex align-items-center gap-1">
+              <i data-feather="book" style="width: 14px; height: 14px;"></i> Official Documentation ↗
             </a>
           </li>
-          <li class="nav-item p-2">
-            <i data-feather="book"></i>
-            <a class="nav-link p-0 d-inline-block" href="https://tabbycat.readthedocs.io/en/stable/">
-              {% trans "Documentation" %}
+          <li>
+            <a href="https://opencollective.com/tabbycat" target="_blank" rel="noopener" class="text-muted text-decoration-none d-flex align-items-center gap-1">
+              <i data-feather="heart" style="width: 14px; height: 14px;"></i> Donate to Tabbycat ↗
             </a>
           </li>
-          <li class="nav-item p-2">
-            <i data-feather="help-circle"></i>
-            <a class="nav-link p-0 d-inline-block" href="https://tabbycat.readthedocs.io/en/stable/about/support.html">
-              {% trans "Support" %}
-            </a>
-          </li>
-          <li class="nav-item p-2">
-            <i data-feather="facebook"></i>
-            <a class="nav-link p-0 d-inline-block" href="https://www.facebook.com/TabbycatDebate/">
-              {% trans "Facebook" %}
-            </a>
-          </li>
-          <li class="nav-item p-2">
-            <i data-feather="upload-cloud"></i>
-            <a class="nav-link p-0 d-inline-block" href="https://github.com/TabbycatDebate/tabbycat#%EF%B8%8F-installation">
-              {% trans "Set Up A Copy" %}
+          <li>
+            <a href="{% url 'landing:contact' %}" class="text-muted text-decoration-none d-flex align-items-center gap-1">
+              <i data-feather="help-circle" style="width: 14px; height: 14px;"></i> Support Desk
             </a>
           </li>
         </ul>
       </div>
+
     </div>
 
-  </div>
-</div>
+    <!-- Bottom Horizontal Bar -->
+    <div class="pt-4 border-top border-secondary d-flex flex-wrap justify-content-between align-items-center gap-3" style="border-color: #1e293b !important;">
+      <div class="text-muted small">
+        &copy; {% now "Y" %} Tabbycat. Released under the AGPL-3.0 License.
+      </div>
 
+      <div class="d-flex align-items-center gap-3 small">
+        <a href="#" class="text-muted text-decoration-none d-inline-flex align-items-center gap-1" data-toggle="modal" data-target="#setLanguageModal">
+          <i data-feather="globe" style="width: 14px; height: 14px;"></i>
+          <span>Language ({{ LANGUAGE_CODE|upper }})</span>
+        </a>
+        <span class="text-secondary">&bull;</span>
+        <span class="text-muted">v{{ tabbycat_version|default:"3.18.1" }}</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Language Modal -->
 <div class="modal fade" id="setLanguageModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
+    <div class="modal-content" style="border-radius: 12px; border: 1px solid var(--tc-border);">
       <div class="modal-header">
-        <h5 class="modal-title">{% trans "Change Language" %}</h5>
+        <h5 class="modal-title font-weight-bold">{% trans "Change Language" %}</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <form action="{% url 'set_language' %}" method="post">{% csrf_token %}
+        <form action="{% url 'set_language' %}" method="post">
+          {% csrf_token %}
           <input name="next" type="hidden" value="{{ redirect_to }}">
-          <select name="language" class="custom-select">
-              {% get_available_languages as LANGUAGES %}
-              {% get_language_info_list for LANGUAGES as languages %}
-              {% for language in languages %}
-                <option value="{{ language.code }}"{% if language.code == LANGUAGE_CODE %} selected{% endif %}>
-                  {{ language.name_local }} ({{ language.code }})
-                </option>
-              {% endfor %}
+          <select name="language" class="form-select custom-select w-100">
+            {% get_available_languages as LANGUAGES %}
+            {% get_language_info_list for LANGUAGES as languages %}
+            {% for language in languages %}
+              <option value="{{ language.code }}"{% if language.code == LANGUAGE_CODE %} selected{% endif %}>
+                {{ language.name_local }} ({{ language.code }})
+              </option>
+            {% endfor %}
           </select>
-          <input class="btn btn-primary btn-block mt-3" type="submit" value="{% trans "Use this language" %}">
+          <button class="tc-btn tc-btn-primary w-100 mt-3 font-weight-bold" type="submit">
+            {% trans "Save & Apply Language" %}
+          </button>
         </form>
       </div>
     </div>
   </div>
 </div>
-{% endcache %}

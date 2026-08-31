@@ -5,103 +5,199 @@
 {% block sa-subtitle %}{% trans "Verify manual transactions (bKash, Nagad, Rocket) and grant plan entitlements" %}{% endblock %}
 
 {% block sa-content %}
-<div class="sa-card mb-4">
-  <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center">
-    <form method="get" class="form-inline mb-2 mb-md-0">
-      <div class="input-group mr-2">
-        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search tenant, TrxID, phone...">
-        <div class="input-group-append">
-          <button type="submit" class="btn btn-outline-secondary">Search</button>
-        </div>
+<div id="saPaymentsApp" class="tc-card">
+  <!-- Search and Tabs Bar -->
+  <div class="tc-card-header flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 420px;">
+      <div class="tc-search-box w-100">
+        <i data-feather="search" class="tc-search-icon"></i>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          class="tc-search-input" 
+          placeholder="Search by tenant, TrxID, phone number, plan...">
       </div>
-      
-      <select name="status" class="custom-select mr-2" onchange="this.form.submit()">
-        <option value="">All Statuses</option>
-        {% for code, label in status_choices %}
-          <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+    </div>
 
-      <select name="method" class="custom-select" onchange="this.form.submit()">
-        <option value="">All Methods</option>
-        {% for code, label in method_choices %}
-          <option value="{{ code }}" {% if method_filter == code %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </form>
+    <!-- Payment Method Filter -->
+    <select v-model="methodFilter" class="form-select form-select-sm" style="max-width: 170px; font-size: 0.8rem;">
+      <option value="all">All Methods</option>
+      <option value="bkash_manual">bKash (Manual)</option>
+      <option value="nagad_manual">Nagad (Manual)</option>
+      <option value="rocket_manual">Rocket (Manual)</option>
+      <option value="bank_transfer">Bank Transfer</option>
+    </select>
 
-    <div>
-      {% if pending_count %}
-        <span class="badge badge-warning px-3 py-2 font-weight-bold">
-          <i data-feather="clock" style="width:14px;height:14px;"></i> {{ pending_count }} Pending Review
-        </span>
-      {% endif %}
+    <!-- Status Tabs -->
+    <div class="tc-tabs">
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'all' }" 
+        @click="statusFilter = 'all'">
+        All ([[ payments.length ]])
+      </button>
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'pending' }" 
+        @click="statusFilter = 'pending'">
+        Pending ([[ pendingCount ]])
+      </button>
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'verified' }" 
+        @click="statusFilter = 'verified'">
+        Verified ([[ verifiedCount ]])
+      </button>
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'rejected' }" 
+        @click="statusFilter = 'rejected'">
+        Rejected ([[ rejectedCount ]])
+      </button>
     </div>
   </div>
 
+  <!-- Table -->
   <div class="table-responsive">
-    <table class="table table-hover mb-0 align-middle">
-      <thead class="thead-light">
+    <table class="tc-table">
+      <thead>
         <tr>
-          <th>Date</th>
+          <th>Submitted Date</th>
           <th>Tenant / Plan</th>
           <th>Amount</th>
           <th>Method</th>
-          <th>Sender Phone & TrxID</th>
+          <th>Sender Info & Trx ID</th>
           <th>Status</th>
-          <th>Action</th>
+          <th class="text-right">Action</th>
         </tr>
       </thead>
       <tbody>
-        {% for payment in payments %}
-        <tr>
+        <tr v-for="p in filteredPayments" :key="p.id">
           <td>
-            <div class="font-weight-bold">{{ payment.created_at|date:"M d, Y" }}</div>
-            <small class="text-muted">{{ payment.created_at|date:"H:i" }}</small>
+            <div class="font-weight-bold">[[ p.created_at ]]</div>
+            <small class="text-muted">[[ p.created_time ]]</small>
           </td>
           <td>
             <div class="font-weight-bold">
-              <a href="{% url 'superadmin:tenant-detail' payment.subscription.tenant.pk %}">{{ payment.subscription.tenant.name }}</a>
+              <a :href="p.tenant_url" class="text-dark text-decoration-none">[[ p.tenant_name ]]</a>
             </div>
-            <small class="text-muted">{{ payment.subscription.plan.name }}</small>
-          </td>
-          <td class="text-success font-weight-bold">
-            ৳{{ payment.amount_bdt }}
+            <span class="tc-badge tc-badge-primary" style="font-size: 0.68rem;">[[ p.plan_name ]]</span>
           </td>
           <td>
-            <span class="badge badge-soft-primary">{{ payment.get_method_display }}</span>
+            <span class="text-success font-weight-bold">৳[[ formatMoney(p.amount) ]]</span>
           </td>
           <td>
-            <code>{{ payment.transaction_id|default:"-" }}</code><br>
-            <small class="text-muted">{{ payment.sender_phone|default:"-" }}</small>
+            <span class="tc-badge tc-badge-info">[[ p.method_display ]]</span>
           </td>
           <td>
-            {% if payment.status == 'verified' %}
-              <span class="badge badge-soft-success">Verified</span>
-            {% elif payment.status == 'pending' %}
-              <span class="badge badge-soft-warning">Pending</span>
-            {% elif payment.status == 'rejected' %}
-              <span class="badge badge-soft-danger">Rejected</span>
-            {% else %}
-              <span class="badge badge-soft-secondary">{{ payment.get_status_display }}</span>
-            {% endif %}
+            <code class="text-dark font-weight-bold">[[ p.transaction_id || 'N/A' ]]</code><br>
+            <small class="text-muted">[[ p.sender_phone || 'No phone recorded' ]]</small>
           </td>
           <td>
-            <a href="{% url 'superadmin:payment-detail' payment.pk %}" class="btn btn-sm btn-outline-primary">
-              Review & Verify
+            <span v-if="p.status === 'verified'" class="tc-badge tc-badge-success">Verified</span>
+            <span v-else-if="p.status === 'pending'" class="tc-badge tc-badge-warning">Pending Review</span>
+            <span v-else-if="p.status === 'rejected'" class="tc-badge tc-badge-danger">Rejected</span>
+            <span v-else class="tc-badge">[[ p.status_display ]]</span>
+          </td>
+          <td class="text-right">
+            <a :href="p.detail_url" class="tc-btn tc-btn-primary tc-btn-sm">
+              <i data-feather="check-square"></i> Review
             </a>
           </td>
         </tr>
-        {% empty %}
-        <tr>
+        <tr v-if="filteredPayments.length === 0">
           <td colspan="7" class="text-center py-5 text-muted">
-            <i data-feather="check-circle" class="text-success mb-2" style="width:36px;height:36px;"></i><br>
-            No payments found matching your filter.
+            <i data-feather="check-circle" class="text-success mb-2" style="width: 32px; height: 32px;"></i><br>
+            No payments found matching the selected filter.
           </td>
         </tr>
-        {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+      return {
+        searchQuery: '',
+        statusFilter: '{% if request.GET.status %}{{ request.GET.status }}{% else %}all{% endif %}',
+        methodFilter: 'all',
+        payments: [
+          {% for payment in payments %}
+          {
+            id: {{ payment.id }},
+            created_at: "{{ payment.created_at|date:'M d, Y' }}",
+            created_time: "{{ payment.created_at|date:'H:i' }}",
+            tenant_name: "{{ payment.subscription.tenant.name|escapejs }}",
+            tenant_url: "{% url 'superadmin:tenant-detail' payment.subscription.tenant.pk %}",
+            plan_name: "{{ payment.subscription.plan.name|escapejs }}",
+            amount: {{ payment.amount_bdt }},
+            method: "{{ payment.method }}",
+            method_display: "{{ payment.get_method_display|escapejs }}",
+            transaction_id: "{{ payment.transaction_id|default:''|escapejs }}",
+            sender_phone: "{{ payment.sender_phone|default:''|escapejs }}",
+            status: "{{ payment.status }}",
+            status_display: "{{ payment.get_status_display|escapejs }}",
+            detail_url: "{% url 'superadmin:payment-detail' payment.pk %}"
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]
+      };
+    },
+    computed: {
+      pendingCount() {
+        return this.payments.filter(p => p.status === 'pending').length;
+      },
+      verifiedCount() {
+        return this.payments.filter(p => p.status === 'verified').length;
+      },
+      rejectedCount() {
+        return this.payments.filter(p => p.status === 'rejected').length;
+      },
+      filteredPayments() {
+        return this.payments.filter(p => {
+          // Status filter
+          if (this.statusFilter !== 'all' && p.status !== this.statusFilter) return false;
+
+          // Method filter
+          if (this.methodFilter !== 'all' && p.method !== this.methodFilter) return false;
+
+          // Search query
+          if (!this.searchQuery.trim()) return true;
+          const q = this.searchQuery.toLowerCase();
+          return (
+            p.tenant_name.toLowerCase().includes(q) ||
+            p.plan_name.toLowerCase().includes(q) ||
+            p.transaction_id.toLowerCase().includes(q) ||
+            p.sender_phone.toLowerCase().includes(q)
+          );
+        });
+      }
+    },
+    methods: {
+      formatMoney(val) {
+        if (!val) return '0.00';
+        return Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+    },
+    mounted() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    },
+    updated() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    }
+  }).mount('#saPaymentsApp');
+</script>
 {% endblock %}

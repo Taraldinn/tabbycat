@@ -1,47 +1,133 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block page-title %}{% trans "Pricing Plans" %}{% endblock %}
+{% block page-title %}{% trans "Plans & Pricing" %}{% endblock %}
 
-{% block content %}
-<div class="container py-5">
-  <div class="text-center mb-5">
-    <h1 class="display-4 font-weight-bold">Plans & Pricing</h1>
-    <p class="lead text-muted">Choose the perfect plan for your debate tournament or institution</p>
-  </div>
+{% block extra-head %}
+<style>
+  .tc-pricing-card {
+    background: #ffffff;
+    border: 1px solid var(--tc-border);
+    border-radius: var(--tc-radius-lg);
+    padding: 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    transition: all 0.2s ease;
+    box-shadow: var(--tc-shadow-sm);
+  }
+  .tc-pricing-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--tc-shadow-lg);
+    border-color: var(--tc-primary-border);
+  }
+  .tc-pricing-card.featured {
+    border: 2px solid var(--tc-primary);
+    box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.15);
+  }
+</style>
+{% endblock %}
 
-  <div class="row justify-content-center">
-    {% for plan in plans %}
-    <div class="col-md-4 mb-4">
-      <div class="card h-100 shadow-sm {% if plan.is_featured %}border-primary{% endif %}">
-        <div class="card-body text-center d-flex flex-column">
-          <h4 class="card-title font-weight-bold">{{ plan.name }}</h4>
-          <h2 class="my-3 text-primary">৳{{ plan.price_bdt }}<small class="text-muted fs-6">/{{ plan.billing_period }}</small></h2>
-          <p class="text-muted">{{ plan.description }}</p>
-          <ul class="list-unstyled text-left mt-3 mb-4 flex-grow-1">
-            <li class="py-1">✓ <strong>{{ plan.max_tournaments }}</strong> Tournaments</li>
-            <li class="py-1">✓ <strong>{{ plan.max_teams_per_tournament }}</strong> Teams per tournament</li>
-            <li class="py-1">✓ <strong>{{ plan.max_adjudicators_per_tournament }}</strong> Adjudicators per tournament</li>
-            <li class="py-1">✓ <strong>{{ plan.max_users }}</strong> Manager accounts</li>
-            <li class="py-1">✓ <strong>{{ plan.max_storage_mb }} MB</strong> Storage</li>
+{% block main-wrapper %}
+<main class="py-5">
+  <div class="container" style="max-width: 1200px;">
+    
+    <!-- Header -->
+    <div class="text-center mb-5" style="max-width: 680px; margin: 0 auto;">
+      <div class="tc-badge tc-badge-primary mb-2">Transparent Pricing</div>
+      <h1 class="font-weight-bold mb-2">Tournament Packages & Subscriptions</h1>
+      <p class="text-muted lead">Choose the right plan tailored to your school intra, regional championship, or annual circuit.</p>
+    </div>
+
+    <!-- Plans Grid Container -->
+    <div class="row g-4 justify-content-center mb-5">
+      {% for plan in plans %}
+      <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+        <div class="tc-pricing-card {% if plan.is_featured %}featured{% endif %}">
+          
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="tc-card-title mb-0" style="font-size: 1.1rem; font-weight: 700;">{{ plan.name }}</h3>
+            {% if plan.is_featured %}
+              <span class="tc-badge tc-badge-primary">⭐ Recommended</span>
+            {% endif %}
+          </div>
+          
+          <div class="my-3 pb-2 border-bottom">
+            <span class="fs-1 font-weight-bold text-primary">৳{{ plan.price_bdt }}</span>
+            <span class="text-muted small font-weight-normal">/{{ plan.billing_period }}</span>
+          </div>
+
+          <p class="text-muted small mb-3" style="min-height: 38px;">{{ plan.description }}</p>
+
+          <ul class="list-unstyled small mb-4 flex-grow-1" style="line-height: 1.8;">
+            <li class="py-1 d-flex align-items-center gap-2">
+              <i data-feather="check" class="text-success flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span><strong>{{ plan.max_tournaments }}</strong> Hosted Tournament{{ plan.max_tournaments|pluralize }}</span>
+            </li>
+            <li class="py-1 d-flex align-items-center gap-2">
+              <i data-feather="check" class="text-success flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span>Up to <strong>{{ plan.max_teams_per_tournament }}</strong> Teams/Event</span>
+            </li>
+            <li class="py-1 d-flex align-items-center gap-2">
+              <i data-feather="check" class="text-success flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span>Up to <strong>{{ plan.max_adjudicators_per_tournament }}</strong> Adjudicators/Event</span>
+            </li>
+            <li class="py-1 d-flex align-items-center gap-2">
+              <i data-feather="check" class="text-success flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span><strong>{{ plan.max_users }}</strong> Manager Accounts</span>
+            </li>
+            <li class="py-1 d-flex align-items-center gap-2">
+              <i data-feather="check" class="text-success flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span><strong>{{ plan.max_storage_mb }} MB</strong> Storage Quota</span>
+            </li>
             {% if plan.custom_domain_allowed %}
-            <li class="py-1">✓ Custom Domain Support</li>
+            <li class="py-1 d-flex align-items-center gap-2 text-primary font-weight-bold">
+              <i data-feather="check" class="text-primary flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span>Custom Domain Support</span>
+            </li>
             {% endif %}
             {% if plan.priority_support %}
-            <li class="py-1">✓ Priority Support</li>
+            <li class="py-1 d-flex align-items-center gap-2">
+              <i data-feather="check" class="text-success flex-shrink-0" style="width: 15px; height: 15px;"></i>
+              <span>Priority Verification & Support</span>
+            </li>
             {% endif %}
           </ul>
-          <a href="{% url 'landing:contact' %}" class="btn {% if plan.is_featured %}btn-primary{% else %}btn-outline-primary{% endif %} btn-block">Choose {{ plan.name }}</a>
+
+          <a href="{% url 'accounts:register' %}?plan={{ plan.slug }}" class="tc-btn {% if plan.is_featured %}tc-btn-primary{% else %}tc-btn-outline{% endif %} w-100 py-2 mt-auto font-weight-bold">
+            Choose {{ plan.name }}
+          </a>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="tc-card p-4">
+          <h4 class="font-weight-bold mb-3">Frequently Asked Questions</h4>
+          
+          <div class="mb-3">
+            <strong class="text-dark d-block">How does manual payment verification work?</strong>
+            <p class="text-muted small mb-0">You can pay via bKash, Nagad, Rocket, or Bank Transfer. After sending the payment, enter your Transaction ID in the checkout screen and our admins will verify and activate your portal.</p>
+          </div>
+          <hr>
+          <div class="mb-3">
+            <strong class="text-dark d-block">Can I upgrade my tournament plan later?</strong>
+            <p class="text-muted small mb-0">Yes, you can upgrade your plan at any time through your Organization Billing Center, and new limits are applied instantly upon verification.</p>
+          </div>
+          <hr>
+          <div>
+            <strong class="text-dark d-block">Can I connect my school's custom domain?</strong>
+            <p class="text-muted small mb-0">Custom domains are supported on Single Pro, Large Tournament, and Yearly Membership plans. You can point your DNS CNAME to our servers.</p>
+          </div>
         </div>
       </div>
     </div>
-    {% empty %}
-    <div class="col-12 text-center">
-      <div class="alert alert-info">
-        Please contact us for custom plans and tournament pricing.
-      </div>
-    </div>
-    {% endfor %}
+
   </div>
-</div>
-{% endblock %}
+</main>
+{% endblock main-wrapper %}

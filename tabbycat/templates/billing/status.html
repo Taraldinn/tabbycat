@@ -1,109 +1,166 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block page-title %}{% trans "Subscription & Payment Status" %}{% endblock %}
+{% block page-title %}{% trans "Subscription & Billing Status" %}{% endblock %}
+
+{% block extra-head %}
+<link rel="stylesheet" href="{% static 'css/modern_compact_ui.css' %}">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+{% endblock %}
+
+{% block body-class %}tc-modern-body{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-9">
+<div id="billingStatusApp" class="container py-4" style="max-width: 920px;">
+  <!-- Header -->
+  <div class="tc-header mb-4">
+    <div>
+      <h1 class="tc-header-title">Billing & Subscription Management</h1>
+      <p class="tc-header-subtitle">Manage plan entitlements, renewal cycles, and transaction history for <strong>{{ tenant.name }}</strong></p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'accounts:dashboard' %}" class="tc-btn tc-btn-outline tc-btn-sm">
+        <i data-feather="grid"></i> Organization Portal
+      </a>
+      <a href="{% url 'billing:checkout' subscription.id %}" class="tc-btn tc-btn-primary tc-btn-sm">
+        <i data-feather="credit-card"></i> Pay / Renew
+      </a>
+    </div>
+  </div>
 
-      <div class="card shadow-sm border-0 mb-4 p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <h3 class="font-weight-bold mb-1">{{ tenant.name }}</h3>
-            <p class="text-muted mb-0">Subdomain: <code>http://{{ tenant.slug }}.{{ base_domain }}:8000</code></p>
+  <!-- Subscription Overview Card -->
+  <div class="tc-card mb-4">
+    <div class="tc-card-header">
+      <div class="d-flex align-items-center gap-2">
+        <i data-feather="repeat" class="text-primary"></i>
+        <h3 class="tc-card-title">Subscription Overview</h3>
+      </div>
+      <span v-if="subscription.status === 'active'" class="tc-badge tc-badge-success">Active Subscription</span>
+      <span v-else-if="subscription.status === 'pending'" class="tc-badge tc-badge-warning">Verification in Progress</span>
+      <span v-else-if="subscription.status === 'expired'" class="tc-badge tc-badge-danger">Expired</span>
+      <span v-else class="tc-badge">[[ subscription.status ]]</span>
+    </div>
+    <div class="tc-card-body">
+      <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+          <div class="tc-stat-label">Current Plan</div>
+          <div class="d-flex align-items-baseline gap-2">
+            <span class="fs-4 font-weight-bold text-primary">{{ subscription.plan.name }}</span>
+            <span class="text-muted">৳{{ subscription.plan.price_bdt }}/{{ subscription.plan.billing_period }}</span>
           </div>
-          <div>
-            {% if subscription.status == 'active' %}
-              <span class="badge badge-success px-3 py-2 fs-6">Active Plan: {{ subscription.plan.name }}</span>
-            {% elif subscription.status == 'pending' %}
-              <span class="badge badge-warning px-3 py-2 fs-6">Pending Verification</span>
-            {% elif subscription.status == 'trial' %}
-              <span class="badge badge-info px-3 py-2 fs-6">Free Trial</span>
-            {% else %}
-              <span class="badge badge-danger px-3 py-2 fs-6">{{ subscription.get_status_display }}</span>
-            {% endif %}
+          <p class="text-muted small mt-1 mb-0">{{ subscription.plan.description }}</p>
+        </div>
+
+        <div class="col-md-6 border-start-md">
+          <div class="small">
+            <div class="d-flex justify-content-between py-1 border-bottom">
+              <span class="text-muted">Subdomain:</span>
+              <code class="text-primary">{{ tenant.slug }}.{{ base_domain }}</code>
+            </div>
+            <div class="d-flex justify-content-between py-1 border-bottom">
+              <span class="text-muted">Billing Cycle End:</span>
+              <strong class="text-dark">{{ subscription.current_period_end|date:"F d, Y" }}</strong>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted">Tournament Capacity:</span>
+              <span><strong>{{ subscription.plan.max_tournaments }}</strong> tournaments allowed</span>
+            </div>
           </div>
         </div>
-
-        {% if subscription.status == 'pending' %}
-        <div class="alert alert-warning my-3">
-          <h5 class="font-weight-bold">
-            <i data-feather="clock" class="mr-1"></i> Payment Verification in Progress
-          </h5>
-          <p class="mb-0">
-            We have received your payment submission. An administrator is verifying your transaction ID. Your portal limits and full access will be automatically unlocked upon approval.
-          </p>
-        </div>
-        {% elif subscription.status == 'active' %}
-        <div class="alert alert-success my-3">
-          <h5 class="font-weight-bold">
-            <i data-feather="check-circle" class="mr-1"></i> Subscription is Active!
-          </h5>
-          <p class="mb-0">
-            Your portal has full access until <strong>{{ subscription.current_period_end|date:"F d, Y" }}</strong>.
-          </p>
-        </div>
-        {% endif %}
-
-        <hr class="my-4">
-
-        <h5 class="font-weight-bold mb-3">Payment History</h5>
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead class="thead-light">
-              <tr>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Transaction ID</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for payment in payments %}
-              <tr>
-                <td>{{ payment.created_at|date:"M d, Y H:i" }}</td>
-                <td class="font-weight-bold">৳{{ payment.amount_bdt }}</td>
-                <td>{{ payment.get_method_display }}</td>
-                <td><code>{{ payment.transaction_id|default:"-" }}</code></td>
-                <td>
-                  {% if payment.status == 'verified' %}
-                    <span class="badge badge-success">Verified</span>
-                  {% elif payment.status == 'pending' %}
-                    <span class="badge badge-warning">Pending</span>
-                  {% elif payment.status == 'rejected' %}
-                    <span class="badge badge-danger">Rejected</span>
-                    {% if payment.rejection_reason %}
-                      <small class="d-block text-danger">{{ payment.rejection_reason }}</small>
-                    {% endif %}
-                  {% else %}
-                    <span class="badge badge-secondary">{{ payment.get_status_display }}</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="5" class="text-center text-muted py-3">No payments recorded.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="d-flex justify-content-between mt-4">
-          <a href="{% url 'billing:checkout' subscription.id %}" class="btn btn-outline-primary">
-            <i data-feather="credit-card" class="mr-1"></i> Submit Another Payment
-          </a>
-          <a href="{% url 'tabbycat-index' %}" class="btn btn-primary">
-            Go to Portal Home
-          </a>
-        </div>
-
       </div>
 
+      {% if subscription.status == 'pending' %}
+      <div class="alert alert-warning d-flex align-items-center gap-2 mt-4 mb-0 py-2 px-3 small">
+        <i data-feather="clock" class="flex-shrink-0"></i>
+        <div>
+          <strong>Payment Verification in Progress:</strong> We are verifying your submitted transaction ID. Your features and limits will be unlocked immediately upon verification.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Payment History Table -->
+  <div class="tc-card">
+    <div class="tc-card-header">
+      <div class="d-flex align-items-center gap-2">
+        <i data-feather="file-text" class="text-primary"></i>
+        <h3 class="tc-card-title">Transaction History</h3>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="tc-table">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Trx ID</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td>
+              <div class="font-weight-bold">{{ payment.created_at|date:"M d, Y" }}</div>
+              <small class="text-muted">{{ payment.created_at|date:"H:i" }}</small>
+            </td>
+            <td>
+              <span class="text-success font-weight-bold">৳{{ payment.amount_bdt }}</span>
+            </td>
+            <td>
+              <span class="tc-badge tc-badge-info">{{ payment.get_method_display }}</span>
+            </td>
+            <td>
+              <code>{{ payment.transaction_id|default:"-" }}</code>
+            </td>
+            <td>
+              {% if payment.status == 'verified' %}
+                <span class="tc-badge tc-badge-success">Verified</span>
+              {% elif payment.status == 'pending' %}
+                <span class="tc-badge tc-badge-warning">Pending Review</span>
+              {% elif payment.status == 'rejected' %}
+                <span class="tc-badge tc-badge-danger">Rejected</span>
+                {% if payment.rejection_reason %}
+                  <small class="d-block text-danger mt-1">{{ payment.rejection_reason }}</small>
+                {% endif %}
+              {% else %}
+                <span class="tc-badge">{{ payment.get_status_display }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">
+              No payment transactions recorded for this account.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+      return {
+        subscription: {
+          id: {{ subscription.id }},
+          status: "{{ subscription.status }}"
+        }
+      };
+    },
+    mounted() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    }
+  }).mount('#billingStatusApp');
+</script>
 {% endblock %}

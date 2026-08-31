@@ -24,18 +24,18 @@
 
   {% block noindex %}
     {% if tournament %}
-            {% if pref.search_engine_indexing != "all" %}
-                <meta name="robots" content="noindex">
-            {% endif %}
+      {% if pref.search_engine_indexing != "all" %}
+        <meta name="robots" content="noindex">
+      {% endif %}
     {% endif %}
   {% endblock %}
-
 
   <link rel="preload" href="{% static 'fonts/Inter-Regular.woff2' %}" as="font" type="font/woff2">
   <link rel="icon" type="image/png" href="{% static 'logo-32x32.png' %}" sizes="32x32" />
   <link rel="icon" type="image/png" href="{% static 'logo-16x16.png' %}" sizes="16x16" />
   <link rel="mask-icon" href="{% static 'safari-tab.svg' %}" color="rgb(102, 61, 160)">
   <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% static 'css/modern_compact_ui.css' %}" />
   {% block extra-css %}{% endblock %}
   {% block extra-head %}{% endblock %}
 
@@ -50,9 +50,8 @@
     ga('set', 'dimension1', '{% if tabbycat_version %}{{ tabbycat_version }}{% else %}?{% endif %}');
     ga('set', 'dimension2', window.location.hostname);
     ga('send', 'pageview');
-    </script>
-    <script async src='https://www.google-analytics.com/analytics.js'></script>
   </script>
+  <script async src='https://www.google-analytics.com/analytics.js'></script>
   {% endif %}
 
   {% if LANGUAGE_CODE == 'tzl' %}<!-- In-context translations; use Talossan -->
@@ -64,7 +63,7 @@
   {% endif %}
 </head>
 
-<body class="{% block body-class %}{% endblock %}">
+<body class="{% block body-class %}tc-modern-body{% endblock %}">
 
   {% block nav %}
     {% if user_role != "admin" %}
@@ -72,6 +71,7 @@
     {% endif %}
   {% endblock nav %}
 
+  {% block main-wrapper %}
   <div class="container-fluid">
 
     {% if user_role == "admin" %}
@@ -91,40 +91,22 @@
     {% endif %}
 
     {% block header %}
+      {% if page_title or page_subtitle %}
       <div class="row d-print-none {% if user_role == "admin" %}mb-md-3{% endif %}" id="pageTitle">
-
         <div class="col-md m-3 h2 d-flex align-items-center">
-
-          <div class="min-height: 100px;">
-            {% if page_title %}
-              {% if page_emoji %}<span class="emoji">{{ page_emoji }}</span>{% endif %}
-              {{ page_title }}
-            {% else %}
-              {% block head-title %}{% endblock %}
-            {% endif %}
+          <div>
+            {% if page_emoji %}<span class="emoji">{{ page_emoji }}</span>{% endif %}
+            {{ page_title }}
             {% if page_subtitle %}
               <small class="text-muted d-md-inline d-block">{{ page_subtitle }}</small>
-            {% else %}
-              <small class="text-muted d-md-inline d-block">{% block sub-title %}{% endblock %}</small>
             {% endif %}
           </div>
-
         </div>
-
       </div>
+      {% endif %}
     {% endblock header %}
 
     {% block subheader %}
-
-      <div class="row page-navs">
-        <div class="col">
-          <div class="d-lg-flex justify-content-lg-between">
-            {% block page-subnav-sections %}{% endblock %}
-            {% block page-subnav-actions %}{% endblock %}
-          </div>
-        </div>
-      </div>
-
       <div class="row d-print-none">
         <div class="col" id="messages-container">
           {% if messages %}
@@ -135,7 +117,6 @@
           {% block page-alerts %}{% endblock %}
         </div>
       </div>
-
     {% endblock subheader %}
 
     <div class="row">
@@ -145,31 +126,24 @@
     </div>
 
     {% if user_role == "admin" %}
-
         </main>
       </div>
-
     {% endif %}
 
   </div>
+  {% endblock main-wrapper %}
 
   {% if user_role != "admin" %}
-    <footer class="footer">
-      <div class="container-fluid">
-        {% block footer %}{% include "footer.html" %}{% endblock footer %}
-      </div>
-    </footer>
+    {% block footer %}{% include "footer.html" %}{% endblock footer %}
   {% else %}
-    <footer class="footer">
-      <div class="container-fluid">
-        <div class="row">
-          <div class="col d-none d-sm-block"></div>
-          <div class="col-sm-10 col">
-            {% block footeradmin %}{% include "footer.html" %}{% endblock footeradmin %}
-          </div>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col d-none d-sm-block"></div>
+        <div class="col-sm-10 col">
+          {% block footeradmin %}{% include "footer.html" %}{% endblock footeradmin %}
         </div>
       </div>
-    </footer>
+    </div>
   {% endif %}
 
   {% block modals %}
@@ -184,7 +158,6 @@
   {% endblock %}
 
   {% block js %}
-
     <script src="{% statici18n LANGUAGE_CODE %}"></script>
     <script src="{% static 'js/vendor/jquery.js' %}"></script>
     <script>
@@ -219,6 +192,13 @@
       <script type="text/javascript" src="{% static 'vue/js/app.js' %}"></script>
     {% endif %}
 
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof feather !== 'undefined') {
+          feather.replace();
+        }
+      });
+    </script>
   {% endblock js %}
 
 </body>

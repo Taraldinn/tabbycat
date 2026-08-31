@@ -4,146 +4,209 @@
 {% block page-title %}{% trans "Complete Payment" %} - {{ plan.name }}{% endblock %}
 
 {% block extra-head %}
+<link rel="stylesheet" href="{% static 'css/modern_compact_ui.css' %}">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <style>
-  .payment-method-card {
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 12px;
+  .tc-gateway-card {
+    border: 2px solid var(--tc-border);
+    border-radius: var(--tc-radius-sm);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
     background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
-  .payment-badge-bkash { background: #e2136e; color: #fff; }
-  .payment-badge-nagad { background: #f7941d; color: #fff; }
-  .payment-badge-rocket { background: #8c3494; color: #fff; }
+  .tc-gateway-card:hover {
+    border-color: var(--tc-primary);
+  }
+  .tc-gateway-card.active {
+    border-color: var(--tc-primary);
+    background: var(--tc-primary-light);
+  }
+  .badge-bkash { background: #e2136e; color: #ffffff; }
+  .badge-nagad { background: #f7941d; color: #ffffff; }
+  .badge-rocket { background: #8c3494; color: #ffffff; }
 </style>
 {% endblock %}
 
+{% block body-class %}tc-modern-body{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-10">
+<div id="checkoutApp" class="container py-5" style="max-width: 960px;">
+  <!-- Header -->
+  <div class="tc-header mb-4">
+    <div>
+      <h1 class="tc-header-title">Payment & Plan Activation</h1>
+      <p class="tc-header-subtitle">Submit transaction verification to activate <strong>{{ tenant.name }}</strong></p>
+    </div>
+    <div>
+      <a href="{% url 'accounts:dashboard' %}" class="tc-btn tc-btn-outline tc-btn-sm">
+        <i data-feather="arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
 
-      <div class="mb-4">
-        <h2 class="font-weight-bold mb-1">Payment & Plan Activation</h2>
-        <p class="text-muted">Complete your transaction using bKash, Nagad, or Rocket to activate <strong>{{ tenant.name }}</strong></p>
-      </div>
-
-      <div class="row">
-        <!-- Order Summary -->
-        <div class="col-md-5 mb-4">
-          <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-primary text-white py-3">
-              <h5 class="font-weight-bold mb-0">Plan Summary</h5>
-            </div>
-            <div class="card-body">
-              <h4 class="font-weight-bold">{{ plan.name }}</h4>
-              <h2 class="text-primary font-weight-bold my-2">৳{{ plan.price_bdt }} <small class="text-muted fs-6">/{{ plan.billing_period }}</small></h2>
-              <p class="text-muted small">{{ plan.description }}</p>
-
-              <hr>
-
-              <div class="small">
-                <div class="d-flex justify-content-between py-1">
-                  <span class="text-muted">Organization:</span>
-                  <strong>{{ tenant.name }}</strong>
-                </div>
-                <div class="d-flex justify-content-between py-1">
-                  <span class="text-muted">Subdomain:</span>
-                  <code>{{ tenant.slug }}.tabbycatbd.com</code>
-                </div>
-                <div class="d-flex justify-content-between py-1">
-                  <span class="text-muted">Tournaments Limit:</span>
-                  <strong>{{ plan.max_tournaments }}</strong>
-                </div>
-                <div class="d-flex justify-content-between py-1">
-                  <span class="text-muted">Max Teams/Tournament:</span>
-                  <strong>{{ plan.max_teams_per_tournament }}</strong>
-                </div>
-              </div>
-            </div>
+  <div class="row g-4">
+    <!-- Left Column: Summary & Number Instructions -->
+    <div class="col-md-5 mb-4">
+      <!-- Plan Summary -->
+      <div class="tc-card mb-4">
+        <div class="tc-card-header">
+          <h3 class="tc-card-title">Order Summary</h3>
+          <span class="tc-badge tc-badge-primary">{{ plan.name }}</span>
+        </div>
+        <div class="tc-card-body">
+          <div class="tc-stat-val text-primary mb-2">
+            ৳{{ plan.price_bdt }}
+            <small class="text-muted fs-6 font-weight-normal">/{{ plan.billing_period }}</small>
           </div>
+          <p class="text-muted small mb-3">{{ plan.description }}</p>
 
-          <!-- Payment Instructions Card -->
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-light py-3">
-              <h6 class="font-weight-bold mb-0">Payment Instructions</h6>
+          <div class="border-top pt-3 small">
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted">Organization:</span>
+              <strong class="text-dark">{{ tenant.name }}</strong>
             </div>
-            <div class="card-body small">
-              <div class="mb-3">
-                <span class="badge payment-badge-bkash px-2 py-1 mb-1">bKash (Send Money / Payment)</span>
-                <div>Number: <strong>{{ bkash_number }}</strong></div>
-              </div>
-              <div class="mb-3">
-                <span class="badge payment-badge-nagad px-2 py-1 mb-1">Nagad (Send Money)</span>
-                <div>Number: <strong>{{ nagad_number }}</strong></div>
-              </div>
-              <div class="mb-3">
-                <span class="badge payment-badge-rocket px-2 py-1 mb-1">Rocket</span>
-                <div>Number: <strong>{{ rocket_number }}</strong></div>
-              </div>
-              <p class="text-muted mb-0">
-                1. Send exact amount <strong>৳{{ plan.price_bdt }}</strong>.<br>
-                2. Copy the <strong>Transaction ID (TrxID)</strong> and fill the form on the right.
-              </p>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted">Subdomain:</span>
+              <code class="text-primary">{{ tenant.slug }}.tabbycatbd.com</code>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted">Tournament Capacity:</span>
+              <strong>{{ plan.max_tournaments }} event{{ plan.max_tournaments|pluralize }}</strong>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted">Max Teams/Event:</span>
+              <strong>{{ plan.max_teams_per_tournament }} teams</strong>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Payment Verification Form -->
-        <div class="col-md-7 mb-4">
-          <div class="card shadow-sm border-0 p-4">
-            <h5 class="font-weight-bold mb-3">Submit Payment Details</h5>
-            
-            <form method="post" enctype="multipart/form-data">
-              {% csrf_token %}
-
-              {% if form.non_field_errors %}
-              <div class="alert alert-danger">
-                {% for error in form.non_field_errors %}
-                  <div>{{ error }}</div>
-                {% endfor %}
-              </div>
-              {% endif %}
-
-              <div class="form-group">
-                <label class="font-weight-bold">Payment Method *</label>
-                {{ form.method }}
-                {% if form.method.errors %}<small class="text-danger">{{ form.method.errors.0 }}</small>{% endif %}
-              </div>
-
-              <div class="form-group">
-                <label class="font-weight-bold">Sender Phone Number *</label>
-                {{ form.sender_phone }}
-                <small class="text-muted">The mobile number from which the money was sent.</small>
-                {% if form.sender_phone.errors %}<small class="text-danger d-block">{{ form.sender_phone.errors.0 }}</small>{% endif %}
-              </div>
-
-              <div class="form-group">
-                <label class="font-weight-bold">Transaction ID (TrxID) *</label>
-                {{ form.transaction_id }}
-                <small class="text-muted">The SMS transaction code (e.g. 9B8C7D6E5F).</small>
-                {% if form.transaction_id.errors %}<small class="text-danger d-block">{{ form.transaction_id.errors.0 }}</small>{% endif %}
-              </div>
-
-              <div class="form-group">
-                <label class="font-weight-bold">Payment Screenshot / Receipt (Optional)</label>
-                <div class="custom-file">
-                  {{ form.payment_screenshot }}
-                  <label class="custom-file-label" for="customFile">Choose screenshot image...</label>
-                </div>
-                {% if form.payment_screenshot.errors %}<small class="text-danger d-block">{{ form.payment_screenshot.errors.0 }}</small>{% endif %}
-              </div>
-
-              <button type="submit" class="btn btn-primary btn-block btn-lg font-weight-bold mt-4">
-                <i data-feather="send" class="mr-1"></i> Submit Payment for Verification
+      <!-- Merchant Numbers Box -->
+      <div class="tc-card">
+        <div class="tc-card-header">
+          <h3 class="tc-card-title">Transfer Numbers</h3>
+        </div>
+        <div class="tc-card-body p-3">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="tc-badge badge-bkash">bKash (Send Money)</span>
+              <button type="button" @click="copyNumber('{{ bkash_number }}', 'bKash')" class="tc-btn tc-btn-outline tc-btn-sm" style="padding: 2px 8px; font-size: 0.72rem;">
+                [[ copiedKey === 'bKash' ? 'Copied!' : 'Copy' ]]
               </button>
-            </form>
+            </div>
+            <code class="fs-6 font-weight-bold text-dark">{{ bkash_number }}</code>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="tc-badge badge-nagad">Nagad (Send Money)</span>
+              <button type="button" @click="copyNumber('{{ nagad_number }}', 'Nagad')" class="tc-btn tc-btn-outline tc-btn-sm" style="padding: 2px 8px; font-size: 0.72rem;">
+                [[ copiedKey === 'Nagad' ? 'Copied!' : 'Copy' ]]
+              </button>
+            </div>
+            <code class="fs-6 font-weight-bold text-dark">{{ nagad_number }}</code>
+          </div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="tc-badge badge-rocket">Rocket</span>
+              <button type="button" @click="copyNumber('{{ rocket_number }}', 'Rocket')" class="tc-btn tc-btn-outline tc-btn-sm" style="padding: 2px 8px; font-size: 0.72rem;">
+                [[ copiedKey === 'Rocket' ? 'Copied!' : 'Copy' ]]
+              </button>
+            </div>
+            <code class="fs-6 font-weight-bold text-dark">{{ rocket_number }}</code>
+          </div>
+
+          <div class="alert alert-info py-2 px-3 small mt-3 mb-0" style="font-size: 0.75rem;">
+            Send exact amount <strong>৳{{ plan.price_bdt }}</strong>, then input the <strong>TrxID</strong> and sender phone in the verification form.
           </div>
         </div>
-
       </div>
+    </div>
 
+    <!-- Right Column: Payment Details Submission Form -->
+    <div class="col-md-7 mb-4">
+      <div class="tc-card">
+        <div class="tc-card-header">
+          <h3 class="tc-card-title">Submit Transaction Details</h3>
+        </div>
+        <div class="tc-card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small mb-3">
+              {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="font-weight-bold small mb-1">Payment Method *</label>
+              {{ form.method }}
+              {% if form.method.errors %}<small class="text-danger d-block">{{ form.method.errors.0 }}</small>{% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="font-weight-bold small mb-1">Sender Mobile / Account Number *</label>
+              {{ form.sender_phone }}
+              <small class="text-muted d-block" style="font-size: 0.72rem;">The wallet number used to transfer the money.</small>
+              {% if form.sender_phone.errors %}<small class="text-danger d-block">{{ form.sender_phone.errors.0 }}</small>{% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="font-weight-bold small mb-1">Transaction ID (TrxID) *</label>
+              {{ form.transaction_id }}
+              <small class="text-muted d-block" style="font-size: 0.72rem;">The 10-character reference received via SMS (e.g. 9B8C7D6E5F).</small>
+              {% if form.transaction_id.errors %}<small class="text-danger d-block">{{ form.transaction_id.errors.0 }}</small>{% endif %}
+            </div>
+
+            <div class="mb-4">
+              <label class="font-weight-bold small mb-1">Payment Screenshot / Receipt (Optional)</label>
+              {{ form.payment_screenshot }}
+              {% if form.payment_screenshot.errors %}<small class="text-danger d-block">{{ form.payment_screenshot.errors.0 }}</small>{% endif %}
+            </div>
+
+            <button type="submit" class="tc-btn tc-btn-primary w-100 py-2">
+              <i data-feather="send"></i> Submit Payment for Instant Verification
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+      return {
+        copiedKey: null
+      };
+    },
+    methods: {
+      copyNumber(num, key) {
+        navigator.clipboard.writeText(num).then(() => {
+          this.copiedKey = key;
+          setTimeout(() => {
+            if (this.copiedKey === key) this.copiedKey = null;
+          }, 2000);
+        });
+      }
+    },
+    mounted() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    }
+  }).mount('#checkoutApp');
+</script>
 {% endblock %}

@@ -130,3 +130,60 @@ class TenantOnboardingSuccessView(LoginRequiredMixin, TemplateView):
         context['tenant'] = tenant
         context['base_domain'] = getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
         return context
+
+
+class ClientDashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/client_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        # Fetch active tenant
+        tenant = getattr(self.request, 'tenant', None)
+        if not tenant:
+            tenant = Tenant.objects.filter(owner=user).first()
+        if not tenant:
+            membership = TenantMembership.objects.filter(user=user).select_related('tenant').first()
+            if membership:
+                tenant = membership.tenant
+
+        context['tenant'] = tenant
+        context['base_domain'] = getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
+
+        if tenant:
+            tournaments = tenant.tournament_set.all().order_by('-id')
+            subscription = getattr(tenant, 'subscription', None)
+            plan = subscription.plan if subscription else None
+
+            context['tournaments'] = tournaments
+            context['tournaments_count'] = tournaments.count()
+            context['active_tournaments_count'] = tournaments.filter(active=True).count()
+            context['subscription'] = subscription
+            context['plan'] = plan
+            context['max_tournaments'] = tenant.max_tournaments
+            context['max_teams'] = tenant.max_teams_per_tournament
+            context['max_adjudicators'] = tenant.max_adjudicators_per_tournament
+            context['max_users'] = tenant.max_users
+            context['max_storage_mb'] = tenant.max_storage_mb
+        else:
+            context['tournaments'] = []
+            context['tournaments_count'] = 0
+            context['active_tournaments_count'] = 0
+
+        return context
+
+
+class UserProfileView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/profile.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        memberships = TenantMembership.objects.filter(user=user).select_related('tenant')
+
+        context['user_profile'] = profile
+        context['memberships'] = memberships
+        return context
+

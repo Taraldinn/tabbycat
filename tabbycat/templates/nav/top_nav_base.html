@@ -1,140 +1,131 @@
 {% load debate_tags static i18n %}
 
-<nav class="navbar navbar-expand-lg navbar-light">
-
-  {# Decisions about whether to show items in the menu are based on the role of the user (not the view). #}
-  {% blocktrans trimmed asvar logo_alt %}
-    Tabbycat Logo
-  {% endblocktrans %}
-  {% if all_tournaments.count > 1 or user.is_authenticated %}
-    <div class="nav-item dropdown">
-
-      <button class="btn btn-link mr-2 p-0 navbar-brand dropdown-toggle" id="tournamentdrop"
-              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+<header class="sticky-top" style="background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; z-index: 1030;">
+  <div class="container" style="max-width: 1240px;">
+    <nav class="navbar navbar-expand-lg navbar-light px-0 py-2">
+      
+      <!-- Brand Logo -->
+      <a class="navbar-brand d-flex align-items-center gap-2 font-weight-bold text-dark" href="{% if tournament %}{{ tournament.get_public_url }}{% else %}/{% endif %}" style="letter-spacing: -0.02em;">
         {% if on_local %}
-          {% include "nav/logo_local.html" with width=33 height=33 alt=logo_alt %}
+          {% include "nav/logo_local.html" with width=28 height=28 alt="Tabbycat" %}
         {% else %}
-          {% include "nav/logo.html" with width=33 height=33 alt=logo_alt %}
+          {% include "nav/logo.html" with width=28 height=28 alt="Tabbycat" %}
         {% endif %}
-        {% if tournament %}{{ tournament }}{% else %}Tabbycat{% endif %}
+        <span class="fs-5" style="font-weight: 800; color: #0f172a;">Tabbycat</span>
+        {% if tournament %}
+          <span class="text-muted font-weight-normal fs-6">/ {{ tournament.short_name }}</span>
+        {% endif %}
+      </a>
+
+      <!-- Mobile Hamburger Toggle -->
+      <button class="navbar-toggler border-0" type="button" data-toggle="collapse" data-target="#tcMainNav" aria-controls="tcMainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
       </button>
 
-      <div class="dropdown-menu" aria-labelledby="tournamentdrop">
-
-        {% for tournament in all_tournaments %}
-
-          {% if user.is_superuser %}
-            <a class="dropdown-item px-2" href="{% url 'tournament-admin-home' tournament_slug=tournament.slug %}">
-              <i data-feather="settings"></i>
-              {% blocktrans trimmed %}
-                Administrator area for <strong>{{ tournament }}</strong>
-              {% endblocktrans %}
+      <!-- Collapsible Navigation -->
+      <div class="collapse navbar-collapse" id="tcMainNav">
+        
+        <!-- Left Nav Items -->
+        <ul class="navbar-nav mr-auto align-items-lg-center" style="font-size: 0.875rem; font-weight: 500;">
+          {% if all_tournaments.count > 0 %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle text-dark" href="#" id="tournamentsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i data-feather="award" style="width: 15px; height: 15px;" class="mr-1"></i> Tournaments
             </a>
+            <div class="dropdown-menu shadow-sm border" aria-labelledby="tournamentsDropdown" style="border-radius: 8px;">
+              {% for tourn in all_tournaments %}
+                <a class="dropdown-item py-2" href="{% url 'tournament-public-index' tournament_slug=tourn.slug %}">
+                  <strong>{{ tourn.name }}</strong>
+                </a>
+              {% endfor %}
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item py-2 small text-primary" href="{% url 'tournament-create' %}">
+                + Create New Tournament
+              </a>
+            </div>
+          </li>
           {% endif %}
 
-          {% if user.is_authenticated %}
-            <a class="dropdown-item px-2" href="{% url 'tournament-assistant-home' tournament_slug=tournament.slug %}">
-              <i data-feather="pocket"></i>
-              {% blocktrans trimmed %}
-                Assistant area for <strong>{{ tournament }}</strong>
-              {% endblocktrans %}
-            </a>
-          {% endif %}
-
-          <a class="dropdown-item px-2" href="{% url 'tournament-public-index' tournament_slug=tournament.slug %}">
-            {% if user.is_authenticated %}
-              <i data-feather="globe"></i>
-              {% blocktrans trimmed %}
-                Public area for <strong>{{ tournament }}</strong>
-              {% endblocktrans %}
-            {% else %}
-              <i data-feather="award"></i>
-              {{ tournament }}
-            {% endif %}
-          </a>
-
-          <div class="dropdown-divider"></div>
-        {% endfor %}
-
-        {% if user.is_superuser or user.is_staff %}
-          <a href="{% url 'superadmin:dashboard' %}" class="dropdown-item px-2">
-            <i data-feather="grid"></i>{% trans "Super Admin Console" %}
-          </a>
-          <a href="{% url 'admin:index' %}" target="_blank" class="dropdown-item px-2">
-            <i data-feather="database"></i>{% trans "Edit Database" %}
-          </a>
-          <div class="dropdown-divider"></div>
-        {% endif %}
-
-        <a class="dropdown-item px-2" href="/"><i data-feather="home"></i>{% trans "Site Home" %}</a>
-      </div>
-
-    </div>
-  {% else %}
-    <div class="nav-item">
-
-      {% if tournament %}
-        <a class="navbar-brand" href="{{ tournament.get_public_url  }}">
-          {% include "nav/logo.html" with width=33 height=33  alt=logo_alt %}
-          {{ tournament }}
-        </a>
-      {% else %}
-        <a class="navbar-brand" href="/">
-          {% include "nav/logo.html" with width=33 height=33 alt=logo_alt %}
-          Tabbycat
-        </a>
-      {% endif %}
-
-    </div>
-  {% endif %}
-
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsed-main-nav" aria-controls="collapsed-main-nav" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-
-  <div class="collapse navbar-collapse pt-3 pt-md-0 pb-2 pb-md-0" id="collapsed-main-nav">
-
-    <ul class="navbar-nav mr-auto">
-
-      {% if user_role == "assistant" %}
-        {% include "nav/assistant_nav.html" %}
-      {% else %}
-        {% include "nav/public_nav.html" %}
-      {% endif %}
-
-    </ul>
-
-    <ul class="navbar-nav navbar-my-lg-0 align-items-center">
-      {% if user.is_authenticated %}
-        {% if user.is_superuser %}
-          <li class="nav-item mr-2">
-            <a href="{% url 'superadmin:dashboard' %}" class="badge badge-warning p-2">
-              <i data-feather="shield" style="width:12px;height:12px;"></i> SuperAdmin
+          <li class="nav-item">
+            <a class="nav-link text-secondary px-lg-3" href="{% url 'landing:features' %}">
+              Features
             </a>
           </li>
-        {% endif %}
-        <li class="nav-item">
-          <form id="logout-form" action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-link nav-link">
-              {% trans "Log Out" %} ({{ user }})
-            </button>
-          </form>
-        </li>
-      {% else %}
-        <li class="nav-item mr-2">
-          <a class="nav-link" href="{% url 'login' %}">
-            {% trans "Login" %}
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="btn btn-sm btn-primary text-white px-3" href="{% url 'accounts:register' %}">
-            {% trans "Create Portal" %}
-          </a>
-        </li>
-      {% endif %}
-    </ul>
+          <li class="nav-item">
+            <a class="nav-link text-secondary px-lg-3" href="{% url 'landing:pricing' %}">
+              Pricing
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-secondary px-lg-3" href="{% url 'landing:contact' %}">
+              Support & Docs
+            </a>
+          </li>
+        </ul>
 
+        <!-- Right Action Buttons -->
+        <div class="d-flex align-items-center flex-wrap gap-2 mt-3 mt-lg-0">
+          {% if user.is_authenticated %}
+            <!-- Portal Button -->
+            <a href="{% url 'accounts:dashboard' %}" class="tc-btn tc-btn-primary tc-btn-sm" style="font-weight: 600;">
+              <i data-feather="grid" style="width: 14px; height: 14px;"></i> Organization Portal
+            </a>
+
+            <!-- SuperAdmin Button for Staff -->
+            {% if user.is_superuser or user.is_staff %}
+              <a href="{% url 'superadmin:dashboard' %}" class="tc-btn tc-btn-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 600;">
+                <i data-feather="shield" style="width: 14px; height: 14px;"></i> SuperAdmin
+              </a>
+            {% endif %}
+
+            <!-- User Dropdown Menu -->
+            <div class="nav-item dropdown">
+              <button class="btn btn-link text-dark dropdown-toggle p-1 d-flex align-items-center gap-1 text-decoration-none" id="userMenuDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="d-inline-flex align-items-center justify-content-center bg-light text-primary font-weight-bold rounded-circle border" style="width: 30px; height: 30px; font-size: 0.75rem;">
+                  {{ user.username|slice:":2"|upper }}
+                </span>
+                <span class="small font-weight-bold ml-1">{{ user.username }}</span>
+              </button>
+
+              <div class="dropdown-menu dropdown-menu-right shadow-sm border" aria-labelledby="userMenuDrop" style="border-radius: 8px; min-width: 180px;">
+                <div class="dropdown-header small text-uppercase">Signed in as <strong>{{ user.username }}</strong></div>
+                <a class="dropdown-item small py-2" href="{% url 'accounts:profile' %}">
+                  <i data-feather="user" style="width: 14px; height: 14px;" class="mr-1"></i> My Profile
+                </a>
+                <a class="dropdown-item small py-2" href="{% url 'accounts:dashboard' %}">
+                  <i data-feather="briefcase" style="width: 14px; height: 14px;" class="mr-1"></i> Organization Portal
+                </a>
+                {% if user.is_superuser or user.is_staff %}
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item small py-2" href="{% url 'superadmin:dashboard' %}">
+                    <i data-feather="grid" style="width: 14px; height: 14px;" class="mr-1"></i> SuperAdmin Console
+                  </a>
+                  <a class="dropdown-item small py-2" href="{% url 'admin:index' %}" target="_blank">
+                    <i data-feather="database" style="width: 14px; height: 14px;" class="mr-1"></i> Django Database
+                  </a>
+                {% endif %}
+                <div class="dropdown-divider"></div>
+                <form action="{% url 'logout' %}" method="post" class="px-2 py-1">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger w-100 font-weight-bold" style="font-size: 0.75rem;">
+                    <i data-feather="log-out" style="width: 12px; height: 12px;"></i> Log Out
+                  </button>
+                </form>
+              </div>
+            </div>
+
+          {% else %}
+            <!-- Guest Links -->
+            <a href="{% url 'login' %}" class="tc-btn tc-btn-outline tc-btn-sm font-weight-bold mr-2">
+              Sign In
+            </a>
+            <a href="{% url 'accounts:register' %}" class="tc-btn tc-btn-primary tc-btn-sm font-weight-bold">
+              <i data-feather="zap" style="width: 14px; height: 14px;"></i> Create Portal
+            </a>
+          {% endif %}
+        </div>
+
+      </div>
+    </nav>
   </div>
-
-</nav>
+</header>

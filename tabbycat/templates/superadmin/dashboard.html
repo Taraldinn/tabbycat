@@ -1,193 +1,273 @@
 {% extends "superadmin/base_superadmin.html" %}
-{% load i18n static humanize %}
+{% load i18n static %}
 
-{% block sa-title %}{% trans "Platform Overview" %}{% endblock %}
-{% block sa-subtitle %}{% trans "Real-time metrics, payment verifications, and tenant monitoring" %}{% endblock %}
+{% block sa-title %}{% trans "SuperAdmin Overview" %}{% endblock %}
+{% block sa-subtitle %}{% trans "Real-time metrics, live payment verification queue, and multi-tenant telemetry" %}{% endblock %}
 
 {% block sa-actions %}
-<a href="{% url 'superadmin:tenant-create' %}" class="btn btn-primary mr-2">
+<a href="{% url 'superadmin:tenant-create' %}" class="tc-btn tc-btn-primary">
   <i data-feather="plus"></i> New Tenant
 </a>
-<a href="{% url 'superadmin:plan-create' %}" class="btn btn-outline-primary">
+<a href="{% url 'superadmin:plan-create' %}" class="tc-btn tc-btn-outline">
   <i data-feather="tag"></i> New Plan
 </a>
 {% endblock %}
 
 {% block sa-content %}
-<!-- Key KPI Cards -->
-<div class="row mb-4">
-  <div class="col-md-3 mb-3">
-    <div class="sa-stat-card">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="text-muted font-weight-bold text-uppercase small">Total Tenants</span>
-        <div class="sa-stat-icon bg-light text-primary">
-          <i data-feather="briefcase"></i>
-        </div>
-      </div>
-      <h3 class="font-weight-bold mb-1">{{ total_tenants }}</h3>
-      <span class="badge badge-soft-success">{{ active_tenants }} active</span>
-    </div>
-  </div>
-
-  <div class="col-md-3 mb-3">
-    <div class="sa-stat-card">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="text-muted font-weight-bold text-uppercase small">Total Revenue</span>
-        <div class="sa-stat-icon bg-light text-success">
-          <i data-feather="dollar-sign"></i>
-        </div>
-      </div>
-      <h3 class="font-weight-bold mb-1">৳{{ total_revenue|floatformat:2 }}</h3>
-      <span class="text-muted small">৳{{ month_revenue|floatformat:2 }} last 30 days</span>
-    </div>
-  </div>
-
-  <div class="col-md-3 mb-3">
-    <div class="sa-stat-card">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="text-muted font-weight-bold text-uppercase small">Active Subscriptions</span>
-        <div class="sa-stat-icon bg-light text-info">
-          <i data-feather="repeat"></i>
-        </div>
-      </div>
-      <h3 class="font-weight-bold mb-1">{{ active_subscriptions }}</h3>
-      <span class="badge badge-soft-warning">{{ pending_subscriptions }} pending</span>
-    </div>
-  </div>
-
-  <div class="col-md-3 mb-3">
-    <div class="sa-stat-card {% if pending_payments_count %}border-warning bg-light{% endif %}">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="text-muted font-weight-bold text-uppercase small">Pending Verification</span>
-        <div class="sa-stat-icon bg-light text-warning">
-          <i data-feather="clock"></i>
-        </div>
-      </div>
-      <h3 class="font-weight-bold mb-1 text-warning">{{ pending_payments_count }}</h3>
-      {% if pending_payments_count %}
-        <a href="{% url 'superadmin:payment-list' %}?status=pending" class="small text-danger font-weight-bold">Requires Action ➔</a>
-      {% else %}
-        <span class="badge badge-soft-success">All Clear</span>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
-<!-- Secondary Stats Row -->
-<div class="row mb-4">
-  <div class="col-md-4 mb-3">
-    <div class="sa-card p-3 d-flex align-items-center justify-content-between">
-      <div>
-        <h6 class="text-muted mb-1 small text-uppercase">Tournaments Hosted</h6>
-        <h4 class="font-weight-bold mb-0">{{ total_tournaments }} <small class="text-muted font-weight-normal">({{ active_tournaments }} active)</small></h4>
-      </div>
-      <a href="{% url 'superadmin:tournament-list' %}" class="btn btn-sm btn-light">View All</a>
-    </div>
-  </div>
-  <div class="col-md-4 mb-3">
-    <div class="sa-card p-3 d-flex align-items-center justify-content-between">
-      <div>
-        <h6 class="text-muted mb-1 small text-uppercase">Registered Users</h6>
-        <h4 class="font-weight-bold mb-0">{{ total_users }}</h4>
-      </div>
-      <a href="{% url 'superadmin:user-list' %}" class="btn btn-sm btn-light">Directory</a>
-    </div>
-  </div>
-  <div class="col-md-4 mb-3">
-    <div class="sa-card p-3 d-flex align-items-center justify-content-between">
-      <div>
-        <h6 class="text-muted mb-1 small text-uppercase">Pricing Plans</h6>
-        <h4 class="font-weight-bold mb-0">{{ plans_count }}</h4>
-      </div>
-      <a href="{% url 'superadmin:plan-list' %}" class="btn btn-sm btn-light">Manage</a>
-    </div>
-  </div>
-</div>
-
-<!-- Pending Verification Queue & Recent Tenants -->
-<div class="row">
-  <!-- Pending Payments Queue -->
-  <div class="col-lg-7 mb-4">
-    <div class="sa-card">
-      <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
-        <h5 class="font-weight-bold mb-0">
-          <i data-feather="alert-circle" class="text-warning mr-1"></i>
-          Pending Manual Payments
-        </h5>
-        <a href="{% url 'superadmin:payment-list' %}" class="small font-weight-bold">View All Payments ➔</a>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="thead-light">
-            <tr>
-              <th>Tenant</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Trx ID / Phone</th>
-              <th>Submitted</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for payment in pending_payments %}
-            <tr>
-              <td class="font-weight-bold">{{ payment.subscription.tenant.name }}</td>
-              <td class="text-success font-weight-bold">৳{{ payment.amount_bdt }}</td>
-              <td><span class="badge badge-soft-primary">{{ payment.get_method_display }}</span></td>
-              <td>
-                <code>{{ payment.transaction_id|default:"-" }}</code><br>
-                <small class="text-muted">{{ payment.sender_phone }}</small>
-              </td>
-              <td><small class="text-muted">{{ payment.created_at|timesince }} ago</small></td>
-              <td>
-                <a href="{% url 'superadmin:payment-detail' payment.pk %}" class="btn btn-sm btn-outline-primary">Review</a>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="text-center py-4 text-muted">
-                <i data-feather="check-circle" class="text-success mb-2" style="width:32px;height:32px;"></i><br>
-                No pending payments waiting for verification!
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Tenants -->
-  <div class="col-lg-5 mb-4">
-    <div class="sa-card">
-      <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
-        <h5 class="font-weight-bold mb-0">Recent Tenants</h5>
-        <a href="{% url 'superadmin:tenant-list' %}" class="small font-weight-bold">View All ➔</a>
-      </div>
-      <div class="list-group list-group-flush">
-        {% for tenant in recent_tenants %}
-        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-          <div>
-            <h6 class="mb-1 font-weight-bold">
-              <a href="{% url 'superadmin:tenant-detail' tenant.pk %}" class="text-dark">{{ tenant.name }}</a>
-            </h6>
-            <small class="text-muted">Slug: <code>{{ tenant.slug }}</code> | Owner: {{ tenant.owner.username }}</small>
-          </div>
-          <div class="text-right">
-            {% if tenant.is_active %}
-              <span class="badge badge-soft-success">Active</span>
-            {% else %}
-              <span class="badge badge-soft-danger">Inactive</span>
-            {% endif %}
-            <br>
-            <small class="text-muted">{{ tenant.created_at|date:"M d" }}</small>
+<div id="saDashboardApp">
+  <!-- Top KPI Grid -->
+  <div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="tc-stat-label">Organizations & Tenants</span>
+          <div class="tc-stat-icon" style="background: #eef2ff; color: #4f46e5;">
+            <i data-feather="briefcase"></i>
           </div>
         </div>
-        {% empty %}
-        <div class="p-4 text-center text-muted">No tenants created yet.</div>
-        {% endfor %}
+        <div class="tc-stat-val">[[ kpis.total_tenants ]]</div>
+        <div class="mt-2 d-flex align-items-center gap-2">
+          <span class="tc-badge tc-badge-success">[[ kpis.active_tenants ]] active</span>
+          <span class="text-muted small">[[ kpis.total_tenants - kpis.active_tenants ]] inactive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="tc-stat-label">Total Platform Revenue</span>
+          <div class="tc-stat-icon" style="background: #ecfdf5; color: #10b981;">
+            <i data-feather="dollar-sign"></i>
+          </div>
+        </div>
+        <div class="tc-stat-val text-success">৳[[ formatMoney(kpis.total_revenue) ]]</div>
+        <div class="mt-2 text-muted small">
+          <strong class="text-dark">৳[[ formatMoney(kpis.month_revenue) ]]</strong> in last 30 days
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="tc-stat-label">Subscriptions</span>
+          <div class="tc-stat-icon" style="background: #f0f9ff; color: #0284c7;">
+            <i data-feather="repeat"></i>
+          </div>
+        </div>
+        <div class="tc-stat-val">[[ kpis.active_subscriptions ]]</div>
+        <div class="mt-2 d-flex align-items-center gap-2">
+          <span class="tc-badge tc-badge-info">[[ kpis.active_subscriptions ]] active</span>
+          <span v-if="kpis.pending_subscriptions > 0" class="tc-badge tc-badge-warning">[[ kpis.pending_subscriptions ]] pending</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card" :style="kpis.pending_payments_count > 0 ? 'border-color: #f59e0b; background: #fffdf5;' : ''">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="tc-stat-label">Manual Payments Queue</span>
+          <div class="tc-stat-icon" style="background: #fffbeb; color: #d97706;">
+            <i data-feather="clock"></i>
+          </div>
+        </div>
+        <div class="tc-stat-val" :class="{'text-warning': kpis.pending_payments_count > 0}">
+          [[ kpis.pending_payments_count ]]
+        </div>
+        <div class="mt-2">
+          <span v-if="kpis.pending_payments_count > 0" class="tc-badge tc-badge-danger">Action Required</span>
+          <span v-else class="tc-badge tc-badge-success">All Clear</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secondary Metrics Bar -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4 mb-3">
+      <div class="tc-card p-3 d-flex align-items-center justify-content-between">
+        <div>
+          <div class="tc-stat-label">Tournaments Hosted</div>
+          <div class="d-flex align-items-baseline gap-2">
+            <span class="fs-5 font-weight-bold">[[ kpis.total_tournaments ]]</span>
+            <span class="text-muted small">([[ kpis.active_tournaments ]] live)</span>
+          </div>
+        </div>
+        <a href="{% url 'superadmin:tournament-list' %}" class="tc-btn tc-btn-outline tc-btn-sm">Tournaments ➔</a>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="tc-card p-3 d-flex align-items-center justify-content-between">
+        <div>
+          <div class="tc-stat-label">Total Users</div>
+          <div class="fs-5 font-weight-bold">[[ kpis.total_users ]]</div>
+        </div>
+        <a href="{% url 'superadmin:user-list' %}" class="tc-btn tc-btn-outline tc-btn-sm">Directory ➔</a>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="tc-card p-3 d-flex align-items-center justify-content-between">
+        <div>
+          <div class="tc-stat-label">Active Plans</div>
+          <div class="fs-5 font-weight-bold">[[ kpis.plans_count ]]</div>
+        </div>
+        <a href="{% url 'superadmin:plan-list' %}" class="tc-btn tc-btn-outline tc-btn-sm">Manage Plans ➔</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Split: Pending Payments Verification & Recent Tenants -->
+  <div class="row">
+    <!-- Left Column: Pending Payments Queue -->
+    <div class="col-lg-7 mb-4">
+      <div class="tc-card">
+        <div class="tc-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <i data-feather="shield" class="text-warning"></i>
+            <h3 class="tc-card-title">Pending Payment Verification</h3>
+            <span class="tc-badge tc-badge-warning" v-if="pendingPayments.length > 0">[[ pendingPayments.length ]] queue</span>
+          </div>
+          <a href="{% url 'superadmin:payment-list' %}" class="tc-btn tc-btn-outline tc-btn-sm">View All Payments</a>
+        </div>
+        <div class="table-responsive">
+          <table class="tc-table">
+            <thead>
+              <tr>
+                <th>Tenant / Plan</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Transaction Details</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in pendingPayments" :key="p.id">
+                <td>
+                  <strong class="text-dark">[[ p.tenant_name ]]</strong><br>
+                  <span class="tc-badge tc-badge-primary" style="font-size: 0.68rem;">[[ p.plan_name ]]</span>
+                </td>
+                <td>
+                  <span class="text-success font-weight-bold">৳[[ formatMoney(p.amount) ]]</span>
+                </td>
+                <td>
+                  <span class="tc-badge tc-badge-info">[[ p.method ]]</span>
+                </td>
+                <td>
+                  <code class="text-dark">[[ p.transaction_id || 'N/A' ]]</code><br>
+                  <small class="text-muted">[[ p.sender_phone ]]</small>
+                </td>
+                <td class="text-right">
+                  <a :href="p.detail_url" class="tc-btn tc-btn-primary tc-btn-sm">Review</a>
+                </td>
+              </tr>
+              <tr v-if="pendingPayments.length === 0">
+                <td colspan="5" class="text-center py-4 text-muted">
+                  <i data-feather="check-circle" class="text-success mb-2" style="width: 28px; height: 28px;"></i><br>
+                  No pending payments awaiting verification.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Recent Tenants -->
+    <div class="col-lg-5 mb-4">
+      <div class="tc-card">
+        <div class="tc-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <i data-feather="briefcase" class="text-primary"></i>
+            <h3 class="tc-card-title">Recent Organizations</h3>
+          </div>
+          <a href="{% url 'superadmin:tenant-list' %}" class="tc-btn tc-btn-outline tc-btn-sm">Directory</a>
+        </div>
+        <div class="p-0">
+          <div v-for="t in recentTenants" :key="t.id" class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+              <a :href="t.detail_url" class="font-weight-bold text-dark text-decoration-none">
+                [[ t.name ]]
+              </a>
+              <div class="small text-muted">
+                <code>[[ t.slug ]]</code> &bull; Owner: [[ t.owner ]]
+              </div>
+            </div>
+            <div class="text-right">
+              <span v-if="t.is_active" class="tc-badge tc-badge-success">Active</span>
+              <span v-else class="tc-badge tc-badge-danger">Inactive</span>
+              <div class="small text-muted mt-1">[[ t.created_at ]]</div>
+            </div>
+          </div>
+          <div v-if="recentTenants.length === 0" class="text-center py-4 text-muted">
+            No tenants created yet.
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+      return {
+        kpis: {
+          total_tenants: {{ total_tenants|default:0 }},
+          active_tenants: {{ active_tenants|default:0 }},
+          total_tournaments: {{ total_tournaments|default:0 }},
+          active_tournaments: {{ active_tournaments|default:0 }},
+          total_users: {{ total_users|default:0 }},
+          total_revenue: {{ total_revenue|default:0 }},
+          month_revenue: {{ month_revenue|default:0 }},
+          active_subscriptions: {{ active_subscriptions|default:0 }},
+          pending_subscriptions: {{ pending_subscriptions|default:0 }},
+          pending_payments_count: {{ pending_payments_count|default:0 }},
+          plans_count: {{ plans_count|default:0 }}
+        },
+        pendingPayments: [
+          {% for p in pending_payments %}
+          {
+            id: {{ p.id }},
+            tenant_name: "{{ p.subscription.tenant.name|escapejs }}",
+            plan_name: "{{ p.subscription.plan.name|escapejs }}",
+            amount: {{ p.amount_bdt }},
+            method: "{{ p.get_method_display|escapejs }}",
+            sender_phone: "{{ p.sender_phone|default:''|escapejs }}",
+            transaction_id: "{{ p.transaction_id|default:''|escapejs }}",
+            detail_url: "{% url 'superadmin:payment-detail' p.pk %}"
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ],
+        recentTenants: [
+          {% for t in recent_tenants %}
+          {
+            id: {{ t.id }},
+            name: "{{ t.name|escapejs }}",
+            slug: "{{ t.slug|escapejs }}",
+            owner: "{{ t.owner.username|escapejs }}",
+            is_active: {% if t.is_active %}true{% else %}false{% endif %},
+            created_at: "{{ t.created_at|date:'M d, Y' }}",
+            detail_url: "{% url 'superadmin:tenant-detail' t.pk %}"
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]
+      };
+    },
+    methods: {
+      formatMoney(val) {
+        if (!val) return '0.00';
+        return Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+    },
+    mounted() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    }
+  }).mount('#saDashboardApp');
+</script>
 {% endblock %}

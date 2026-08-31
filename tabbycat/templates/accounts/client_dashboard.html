@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block page-title %}{% trans "Organization Dashboard" %}{% endblock %}
+
+{% block extra-head %}
+<link rel="stylesheet" href="{% static 'css/modern_compact_ui.css' %}">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+{% endblock %}
+
+{% block body-class %}tc-modern-body{% endblock %}
+
+{% block content %}
+<div id="clientDashboardApp" class="container-fluid py-4 px-md-5">
+  <!-- Organization Header -->
+  <div class="tc-header flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h1 class="tc-header-title">[[ tenant.name || 'My Organization' ]]</h1>
+        <span v-if="tenant.is_active" class="tc-badge tc-badge-success">Active Portal</span>
+        <span v-else class="tc-badge tc-badge-warning">Pending Activation</span>
+      </div>
+      <p class="tc-header-subtitle">
+        Subdomain: <code class="text-primary font-weight-bold">[[ tenant.slug ]].[[ baseDomain ]]</code>
+        <span v-if="tenant.custom_domain" class="ml-2 tc-badge tc-badge-info">[[ tenant.custom_domain ]]</span>
+      </p>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+      <a v-if="subscription" :href="'/billing/status/' + subscription.id + '/'" class="tc-btn tc-btn-outline">
+        <i data-feather="credit-card"></i> Billing Center
+      </a>
+      <a href="{% url 'tournament-create' %}" class="tc-btn tc-btn-primary" :class="{ disabled: isQuotaFull }">
+        <i data-feather="plus"></i> Create Tournament
+      </a>
+    </div>
+  </div>
+
+  <!-- Organization Quota & Subscription Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Quota 1: Tournaments -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="tc-stat-label">Tournaments Quota</span>
+          <span class="tc-badge" :class="isQuotaFull ? 'tc-badge-danger' : 'tc-badge-primary'">
+            [[ tournaments.length ]] / [[ limits.max_tournaments ]]
+          </span>
+        </div>
+        <div class="tc-progress">
+          <div 
+            class="tc-progress-bar" 
+            :class="isQuotaFull ? 'bg-danger' : 'bg-primary'"
+            :style="{ width: tournamentUsagePercent + '%' }">
+          </div>
+        </div>
+        <div class="d-flex justify-content-between text-muted small mt-2">
+          <span>[[ limits.max_tournaments - tournaments.length ]] remaining</span>
+          <span>[[ tournamentUsagePercent ]]% used</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quota 2: Team Capacity -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="tc-stat-label">Max Teams / Event</span>
+          <div class="tc-stat-icon" style="background: #f0fdf4; color: #16a34a; width: 32px; height: 32px;">
+            <i data-feather="users"></i>
+          </div>
+        </div>
+        <div class="tc-stat-val">[[ limits.max_teams ]] <small class="text-muted fs-6">teams</small></div>
+        <div class="text-muted small mt-1">Per individual tournament</div>
+      </div>
+    </div>
+
+    <!-- Quota 3: Adjudicator Capacity -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="tc-stat-label">Max Adjudicators</span>
+          <div class="tc-stat-icon" style="background: #fefce8; color: #ca8a04; width: 32px; height: 32px;">
+            <i data-feather="award"></i>
+          </div>
+        </div>
+        <div class="tc-stat-val">[[ limits.max_adjudicators ]] <small class="text-muted fs-6">adjudicators</small></div>
+        <div class="text-muted small mt-1">Per individual tournament</div>
+      </div>
+    </div>
+
+    <!-- Plan & Subscription Status Widget -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="tc-stat-card" style="background: #ffffff; border-color: #c7d2fe;">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="tc-stat-label">Current Plan</span>
+          <span class="tc-badge tc-badge-primary">[[ plan ? plan.name : 'Custom Plan' ]]</span>
+        </div>
+        <div class="tc-stat-val text-primary">
+          <span v-if="plan">৳[[ plan.price_bdt ]]</span>
+          <span v-else>Free</span>
+          <small class="text-muted fs-6">/[[ plan ? plan.billing_period : 'period' ]]</small>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <span v-if="subscription && subscription.status === 'active'" class="tc-badge tc-badge-success">Subscription Active</span>
+          <span v-else-if="subscription && subscription.status === 'pending'" class="tc-badge tc-badge-warning">Payment Pending</span>
+          <span v-else class="tc-badge tc-badge-info">Active</span>
+          <a href="{% url 'landing:pricing' %}" class="small font-weight-bold text-primary">Upgrade ➔</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tournaments Management Section -->
+  <div class="tc-card">
+    <!-- Header with Search & Filter Tabs -->
+    <div class="tc-card-header flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <i data-feather="award" class="text-primary"></i>
+        <h3 class="tc-card-title">Tournaments & Debates</h3>
+        <span class="tc-badge tc-badge-primary">[[ tournaments.length ]] total</span>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-md-end" style="max-width: 500px;">
+        <div class="tc-search-box w-100" style="max-width: 260px;">
+          <i data-feather="search" class="tc-search-icon"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            class="tc-search-input" 
+            placeholder="Search tournament name or slug...">
+        </div>
+
+        <div class="tc-tabs">
+          <button 
+            type="button" 
+            class="tc-tab-item" 
+            :class="{ active: tabFilter === 'all' }" 
+            @click="tabFilter = 'all'">
+            All ([[ tournaments.length ]])
+          </button>
+          <button 
+            type="button" 
+            class="tc-tab-item" 
+            :class="{ active: tabFilter === 'active' }" 
+            @click="tabFilter = 'active'">
+            Live ([[ activeTournamentsCount ]])
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tournaments Table -->
+    <div class="table-responsive">
+      <table class="tc-table">
+        <thead>
+          <tr>
+            <th>Tournament Name</th>
+            <th>URL Slug</th>
+            <th>Rounds</th>
+            <th>Teams & Adjudicators</th>
+            <th>Status</th>
+            <th class="text-right">Access & Controls</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="tourn in filteredTournaments" :key="tourn.id">
+            <td>
+              <div class="font-weight-bold">
+                <a :href="'/' + tourn.slug + '/'" class="text-dark text-decoration-none">
+                  [[ tourn.name ]]
+                </a>
+              </div>
+              <small class="text-muted">ID: #[[ tourn.id ]]</small>
+            </td>
+            <td>
+              <code class="text-primary font-weight-bold">/[[ tourn.slug ]]/</code>
+            </td>
+            <td>
+              <span class="tc-badge tc-badge-info">[[ tourn.round_count ]] rounds</span>
+            </td>
+            <td>
+              <span class="tc-badge tc-badge-primary">[[ tourn.teams_count ]] teams</span>
+              <span class="tc-badge tc-badge-warning ml-1">[[ tourn.adjs_count ]] adjs</span>
+            </td>
+            <td>
+              <span v-if="tourn.active" class="tc-badge tc-badge-success">Live</span>
+              <span v-else class="tc-badge tc-badge-danger">Archived</span>
+            </td>
+            <td class="text-right">
+              <div class="d-inline-flex gap-1">
+                <a :href="'/' + tourn.slug + '/'" class="tc-btn tc-btn-primary tc-btn-sm" title="Public Tab">
+                  <i data-feather="external-link"></i> Public Tab
+                </a>
+                <a :href="'/' + tourn.slug + '/admin/'" class="tc-btn tc-btn-outline tc-btn-sm" title="Admin Control Room">
+                  <i data-feather="settings"></i> Manage
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredTournaments.length === 0">
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i data-feather="award" class="mb-2" style="width: 36px; height: 36px;"></i><br>
+              No tournaments found. Click <strong>"Create Tournament"</strong> above to launch your first event!
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+      return {
+        searchQuery: '',
+        tabFilter: 'all',
+        baseDomain: '{{ base_domain|escapejs }}',
+        tenant: {
+          id: {{ tenant.id|default:'null' }},
+          name: "{{ tenant.name|default:''|escapejs }}",
+          slug: "{{ tenant.slug|default:''|escapejs }}",
+          custom_domain: "{{ tenant.custom_domain|default:''|escapejs }}",
+          is_active: {% if tenant.is_active %}true{% else %}false{% endif %}
+        },
+        limits: {
+          max_tournaments: {{ max_tournaments|default:1 }},
+          max_teams: {{ max_teams|default:50 }},
+          max_adjudicators: {{ max_adjudicators|default:30 }},
+          max_users: {{ max_users|default:5 }},
+          max_storage_mb: {{ max_storage_mb|default:100 }}
+        },
+        plan: {% if plan %}{
+          name: "{{ plan.name|escapejs }}",
+          price_bdt: "{{ plan.price_bdt }}",
+          billing_period: "{{ plan.billing_period|escapejs }}"
+        }{% else %}null{% endif %},
+        subscription: {% if subscription %}{
+          id: {{ subscription.id }},
+          status: "{{ subscription.status }}"
+        }{% else %}null{% endif %},
+        tournaments: [
+          {% for t in tournaments %}
+          {
+            id: {{ t.id }},
+            name: "{{ t.name|escapejs }}",
+            slug: "{{ t.slug|escapejs }}",
+            active: {% if t.active %}true{% else %}false{% endif %},
+            round_count: {{ t.round_set.count|default:0 }},
+            teams_count: {{ t.team_set.count|default:0 }},
+            adjs_count: {{ t.adjudicator_set.count|default:0 }}
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]
+      };
+    },
+    computed: {
+      activeTournamentsCount() {
+        return this.tournaments.filter(t => t.active).length;
+      },
+      tournamentUsagePercent() {
+        const max = this.limits.max_tournaments || 1;
+        return Math.min(100, Math.round((this.tournaments.length / max) * 100));
+      },
+      isQuotaFull() {
+        return this.tournaments.length >= (this.limits.max_tournaments || 1);
+      },
+      filteredTournaments() {
+        return this.tournaments.filter(t => {
+          if (this.tabFilter === 'active' && !t.active) return false;
+          if (!this.searchQuery.trim()) return true;
+          const q = this.searchQuery.toLowerCase();
+          return t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q);
+        });
+      }
+    },
+    mounted() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    },
+    updated() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    }
+  }).mount('#clientDashboardApp');
+</script>
+{% endblock %}

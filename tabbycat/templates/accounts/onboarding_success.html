@@ -3,56 +3,55 @@
 
 {% block page-title %}{% trans "Portal Ready!" %}{% endblock %}
 
+{% block extra-head %}
+<link rel="stylesheet" href="{% static 'css/modern_compact_ui.css' %}">
+{% endblock %}
+
+{% block body-class %}tc-modern-body{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8 text-center">
-
-      <div class="card shadow-sm border-0 p-4 p-md-5">
-        <div class="mb-4">
-          <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 72px; height: 72px;">
-            <i data-feather="check" style="width: 36px; height: 36px;"></i>
-          </div>
-        </div>
-
-        <h1 class="font-weight-bold mb-3">Welcome to Tabbycat, {{ request.user.first_name|default:request.user.username }}!</h1>
-        <p class="lead text-muted mb-4">
-          Your debate tournament portal for <strong>{{ tenant.name }}</strong> has been created and is ready to use.
-        </p>
-
-        <div class="alert alert-primary py-3 my-4">
-          <span class="text-uppercase small font-weight-bold text-muted d-block mb-1">Your Personal Subdomain URL</span>
-          <h4 class="font-weight-bold text-primary mb-0">
-            <code>http://{{ tenant.slug }}.{{ base_domain }}:8000</code>
-          </h4>
-        </div>
-
-        <div class="row text-left my-4">
-          <div class="col-md-6 mb-3">
-            <div class="p-3 border rounded h-100 bg-light">
-              <h6 class="font-weight-bold text-primary">🏆 Step 1: Create a Tournament</h6>
-              <p class="small text-muted mb-0">Configure rounds, debate formats (BP/Australs), venues, and speaker categories.</p>
-            </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <div class="p-3 border rounded h-100 bg-light">
-              <h6 class="font-weight-bold text-primary">👥 Step 2: Register Participants</h6>
-              <p class="small text-muted mb-0">Import teams, institutions, and adjudicators via CSV or online private URLs.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-center gap-3 mt-3">
-          <a href="{% url 'tournament-create' %}" class="btn btn-primary btn-lg mr-3">
-            <i data-feather="plus-circle" class="mr-1"></i> Create First Tournament
-          </a>
-          <a href="{% url 'tabbycat-index' %}" class="btn btn-outline-secondary btn-lg">
-            Go to Portal Home
-          </a>
-        </div>
-
+<div class="container py-5" style="max-width: 800px;">
+  <div class="tc-card text-center p-4 p-md-5">
+    <div class="mb-3">
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: #ecfdf5; color: #10b981; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto; border: 2px solid #a7f3d0;">
+        <i data-feather="check" style="width: 32px; height: 32px;"></i>
       </div>
+    </div>
 
+    <h1 class="font-weight-bold mb-2">Welcome to Tabbycat, {{ request.user.first_name|default:request.user.username }}!</h1>
+    <p class="text-muted lead mb-4">
+      Your debate tournament portal for <strong>{{ tenant.name }}</strong> has been configured and is ready for use.
+    </p>
+
+    <div class="p-3 mb-4 rounded" style="background: #f5f3ff; border: 1px solid #c7d2fe;">
+      <span class="text-uppercase small font-weight-bold text-muted d-block mb-1">Your Organization Subdomain</span>
+      <h4 class="font-weight-bold text-primary mb-0">
+        <code>{{ tenant.slug }}.{{ base_domain }}</code>
+      </h4>
+    </div>
+
+    <div class="row g-3 text-left my-3">
+      <div class="col-md-6 mb-3">
+        <div class="p-3 border rounded h-100 bg-white">
+          <h6 class="font-weight-bold text-primary mb-1">🏆 1. Launch a Tournament</h6>
+          <p class="small text-muted mb-0">Set up debate format (BP, 3v3 Australs), motions, and speaker score sheets.</p>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="p-3 border rounded h-100 bg-white">
+          <h6 class="font-weight-bold text-primary mb-1">👥 2. Import Teams & Adjudicators</h6>
+          <p class="small text-muted mb-0">Add teams, speakers, institutions, and generate secure private URLs.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-center gap-2 mt-3">
+      <a href="{% url 'tournament-create' %}" class="tc-btn tc-btn-primary py-2 px-4 fs-6">
+        <i data-feather="plus"></i> Create First Tournament
+      </a>
+      <a href="{% url 'accounts:dashboard' %}" class="tc-btn tc-btn-outline py-2 px-3">
+        <i data-feather="grid"></i> Organization Portal
+      </a>
     </div>
   </div>
 </div>

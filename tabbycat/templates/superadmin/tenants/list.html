@@ -1,112 +1,204 @@
 {% extends "superadmin/base_superadmin.html" %}
 {% load i18n static %}
 
-{% block sa-title %}{% trans "Tenants & Organizations" %}{% endblock %}
-{% block sa-subtitle %}{% trans "Manage club portals, subdomains, and resource allocations" %}{% endblock %}
+{% block sa-title %}{% trans "Organizations & Tenants" %}{% endblock %}
+{% block sa-subtitle %}{% trans "Manage club portals, subdomains, and resource quota allocations" %}{% endblock %}
 
 {% block sa-actions %}
-<a href="{% url 'superadmin:tenant-create' %}" class="btn btn-primary">
-  <i data-feather="plus"></i> Add Tenant
+<a href="{% url 'superadmin:tenant-create' %}" class="tc-btn tc-btn-primary">
+  <i data-feather="plus"></i> Add Organization
 </a>
 {% endblock %}
 
 {% block sa-content %}
-<div class="sa-card mb-4">
-  <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center">
-    <form method="get" class="form-inline mb-2 mb-md-0">
-      <div class="input-group mr-2">
-        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search name, slug, domain, owner...">
-        <div class="input-group-append">
-          <button type="submit" class="btn btn-outline-secondary">Search</button>
-        </div>
+<div id="saTenantsApp" class="tc-card">
+  <!-- Search & Interactive Filters Bar -->
+  <div class="tc-card-header flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 420px;">
+      <div class="tc-search-box w-100">
+        <i data-feather="search" class="tc-search-icon"></i>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          class="tc-search-input" 
+          placeholder="Filter by name, subdomain, domain, owner...">
       </div>
-      <select name="status" class="custom-select" onchange="this.form.submit()">
-        <option value="">All Statuses</option>
-        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
-        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
-      </select>
-    </form>
+    </div>
 
-    <div class="text-muted small">
-      Showing {{ tenants|length }} tenant{{ tenants|length|pluralize }}
+    <!-- Status Tabs -->
+    <div class="tc-tabs">
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'all' }" 
+        @click="statusFilter = 'all'">
+        All ([[ tenants.length ]])
+      </button>
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'active' }" 
+        @click="statusFilter = 'active'">
+        Active ([[ activeCount ]])
+      </button>
+      <button 
+        type="button" 
+        class="tc-tab-item" 
+        :class="{ active: statusFilter === 'inactive' }" 
+        @click="statusFilter = 'inactive'">
+        Inactive ([[ inactiveCount ]])
+      </button>
     </div>
   </div>
 
+  <!-- Reactive Compact Tenants Table -->
   <div class="table-responsive">
-    <table class="table table-hover mb-0 align-middle">
-      <thead class="thead-light">
+    <table class="tc-table">
+      <thead>
         <tr>
-          <th>Name / Slug</th>
-          <th>Owner</th>
-          <th>Subdomain / Domain</th>
-          <th>Resource Limits</th>
-          <th>Usage</th>
+          <th>Organization / Subdomain</th>
+          <th>Owner Contact</th>
+          <th>Tournament Quota</th>
+          <th>Capacity Usage</th>
           <th>Status</th>
-          <th>Actions</th>
+          <th class="text-right">Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for tenant in tenants %}
-        <tr>
+        <tr v-for="t in filteredTenants" :key="t.id">
           <td>
             <div class="font-weight-bold">
-              <a href="{% url 'superadmin:tenant-detail' tenant.pk %}">{{ tenant.name }}</a>
+              <a :href="t.detail_url" class="text-dark text-decoration-none">[[ t.name ]]</a>
             </div>
-            <small class="text-muted">Created {{ tenant.created_at|date:"M d, Y" }}</small>
+            <div class="d-flex align-items-center gap-1 mt-1">
+              <code class="text-primary font-weight-bold">[[ t.slug ]]</code>
+              <span v-if="t.custom_domain" class="tc-badge tc-badge-info" style="font-size: 0.65rem;">
+                [[ t.custom_domain ]]
+              </span>
+            </div>
           </td>
           <td>
-            <div>{{ tenant.owner.username }}</div>
-            <small class="text-muted">{{ tenant.owner.email }}</small>
+            <div class="font-weight-bold">[[ t.owner ]]</div>
+            <small class="text-muted">[[ t.email ]]</small>
           </td>
           <td>
-            <code>{{ tenant.slug }}</code>
-            {% if tenant.custom_domain %}
-              <br><small class="badge badge-soft-info">{{ tenant.custom_domain }}</small>
-            {% endif %}
-          </td>
-          <td class="small">
-            <div>Tournaments: <strong>{{ tenant.max_tournaments }}</strong></div>
-            <div>Teams/Tourn: <strong>{{ tenant.max_teams_per_tournament }}</strong></div>
-            <div>Users: <strong>{{ tenant.max_users }}</strong></div>
-          </td>
-          <td class="small">
-            <div>🏆 {{ tenant.tournament_count }} tourns</div>
-            <div>👥 {{ tenant.member_count }} users</div>
-          </td>
-          <td>
-            {% if tenant.is_active %}
-              <span class="badge badge-soft-success">Active</span>
-            {% else %}
-              <span class="badge badge-soft-danger">Inactive</span>
-            {% endif %}
+            <div class="d-flex justify-content-between text-muted" style="font-size: 0.72rem;">
+              <span>[[ t.tournament_count ]] of [[ t.max_tournaments ]] used</span>
+              <span>[[ Math.round((t.tournament_count / (t.max_tournaments || 1)) * 100) ]]%</span>
+            </div>
+            <div class="tc-progress">
+              <div 
+                class="tc-progress-bar" 
+                :class="(t.tournament_count >= t.max_tournaments) ? 'bg-danger' : 'bg-primary'"
+                :style="{ width: Math.min(100, Math.round((t.tournament_count / (t.max_tournaments || 1)) * 100)) + '%' }">
+              </div>
+            </div>
+            <small class="text-muted">Max [[ t.max_teams ]] teams/tourn &bull; [[ t.max_users ]] users</small>
           </td>
           <td>
-            <div class="btn-group btn-group-sm">
-              <a href="{% url 'superadmin:tenant-detail' tenant.pk %}" class="btn btn-outline-secondary" title="View Details">
+            <span class="tc-badge tc-badge-primary">🏆 [[ t.tournament_count ]] tournaments</span><br>
+            <span class="tc-badge tc-badge-info mt-1">👥 [[ t.member_count ]] members</span>
+          </td>
+          <td>
+            <span v-if="t.is_active" class="tc-badge tc-badge-success">Active</span>
+            <span v-else class="tc-badge tc-badge-danger">Inactive</span>
+          </td>
+          <td class="text-right">
+            <div class="d-inline-flex gap-1">
+              <a :href="t.detail_url" class="tc-btn tc-btn-outline tc-btn-sm" title="View details">
                 <i data-feather="eye"></i>
               </a>
-              <a href="{% url 'superadmin:tenant-edit' tenant.pk %}" class="btn btn-outline-primary" title="Edit">
+              <a :href="t.edit_url" class="tc-btn tc-btn-outline tc-btn-sm" title="Edit settings">
                 <i data-feather="edit-2"></i>
               </a>
-              <form method="post" action="{% url 'superadmin:tenant-toggle-active' tenant.pk %}" class="d-inline">
+              <form :action="t.toggle_url" method="post" class="d-inline" onsubmit="return confirm('Toggle active status?')">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-{% if tenant.is_active %}warning{% else %}success{% endif %}" title="{% if tenant.is_active %}Deactivate{% else %}Activate{% endif %}" onclick="return confirm('Change active status for this tenant?')">
-                  <i data-feather="{% if tenant.is_active %}pause{% else %}play{% endif %}"></i>
+                <button type="submit" class="tc-btn tc-btn-outline tc-btn-sm" :title="t.is_active ? 'Deactivate' : 'Activate'">
+                  <i :data-feather="t.is_active ? 'pause' : 'play'"></i>
                 </button>
               </form>
             </div>
           </td>
         </tr>
-        {% empty %}
-        <tr>
-          <td colspan="7" class="text-center py-5 text-muted">
-            <i data-feather="inbox" class="mb-2" style="width: 36px; height: 36px;"></i><br>
-            No tenants found matching your query.
+        <tr v-if="filteredTenants.length === 0">
+          <td colspan="6" class="text-center py-5 text-muted">
+            <i data-feather="inbox" class="mb-2" style="width: 32px; height: 32px;"></i><br>
+            No organizations match your search filter.
           </td>
         </tr>
-        {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+      return {
+        searchQuery: '',
+        statusFilter: 'all',
+        tenants: [
+          {% for tenant in tenants %}
+          {
+            id: {{ tenant.id }},
+            name: "{{ tenant.name|escapejs }}",
+            slug: "{{ tenant.slug|escapejs }}",
+            custom_domain: "{{ tenant.custom_domain|default:''|escapejs }}",
+            owner: "{{ tenant.owner.username|escapejs }}",
+            email: "{{ tenant.owner.email|default:''|escapejs }}",
+            max_tournaments: {{ tenant.max_tournaments|default:1 }},
+            max_teams: {{ tenant.max_teams_per_tournament|default:50 }},
+            max_users: {{ tenant.max_users|default:5 }},
+            tournament_count: {{ tenant.tournament_count|default:0 }},
+            member_count: {{ tenant.member_count|default:1 }},
+            is_active: {% if tenant.is_active %}true{% else %}false{% endif %},
+            detail_url: "{% url 'superadmin:tenant-detail' tenant.pk %}",
+            edit_url: "{% url 'superadmin:tenant-edit' tenant.pk %}",
+            toggle_url: "{% url 'superadmin:tenant-toggle-active' tenant.pk %}"
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]
+      };
+    },
+    computed: {
+      activeCount() {
+        return this.tenants.filter(t => t.is_active).length;
+      },
+      inactiveCount() {
+        return this.tenants.filter(t => !t.is_active).length;
+      },
+      filteredTenants() {
+        return this.tenants.filter(t => {
+          // Status filter
+          if (this.statusFilter === 'active' && !t.is_active) return false;
+          if (this.statusFilter === 'inactive' && t.is_active) return false;
+
+          // Search query
+          if (!this.searchQuery.trim()) return true;
+          const q = this.searchQuery.toLowerCase();
+          return (
+            t.name.toLowerCase().includes(q) ||
+            t.slug.toLowerCase().includes(q) ||
+            t.owner.toLowerCase().includes(q) ||
+            t.email.toLowerCase().includes(q) ||
+            (t.custom_domain && t.custom_domain.toLowerCase().includes(q))
+          );
+        });
+      }
+    },
+    mounted() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    },
+    updated() {
+      if (typeof feather !== 'undefined') {
+        feather.replace();
+      }
+    }
+  }).mount('#saTenantsApp');
+</script>
 {% endblock %}

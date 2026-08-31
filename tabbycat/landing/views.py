@@ -6,19 +6,22 @@ class LandingPageView(TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['plans'] = Plan.objects.filter(is_active=True)
+        context['plans'] = Plan.objects.filter(is_active=True).order_by('display_order', 'price_bdt')
         return context
+
 
 class PricingView(TemplateView):
     template_name = 'landing/pricing.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['plans'] = Plan.objects.filter(is_active=True)
+        context['plans'] = Plan.objects.filter(is_active=True).order_by('display_order', 'price_bdt')
         return context
+
 
 class FeaturesView(TemplateView):
     template_name = 'landing/features.html'
-    
+
+
 class ContactView(TemplateView):
     template_name = 'landing/contact.html'

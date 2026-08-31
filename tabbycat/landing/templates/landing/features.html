@@ -1,48 +1,90 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block page-title %}{% trans "Features" %}{% endblock %}
+{% block page-title %}{% trans "Platform Features" %}{% endblock %}
 
-{% block content %}
-<div class="container py-5">
-  <div class="text-center mb-5">
-    <h1 class="display-4 font-weight-bold">Platform Features</h1>
-    <p class="lead text-muted">Everything you need to organize and manage debate tournaments effortlessly</p>
-  </div>
+{% block main-wrapper %}
+<main class="py-5">
+  <div class="container" style="max-width: 1200px;">
+    <!-- Header -->
+    <div class="text-center mb-5" style="max-width: 680px; margin: 0 auto;">
+      <div class="tc-badge tc-badge-primary mb-2">Capabilities & Engineering</div>
+      <h1 class="font-weight-bold mb-2">Platform Features</h1>
+      <p class="text-muted lead">Discover how Tabbycat manages every phase of tournament orchestration with high reliability.</p>
+    </div>
 
-  <div class="row">
-    <div class="col-md-6 mb-4">
-      <div class="card h-100 p-3 shadow-sm border-0">
-        <div class="card-body">
-          <h3 class="h4 font-weight-bold text-primary mb-3">⚡ Comprehensive Format Support</h3>
-          <p class="text-muted">Supports British Parliamentary (BP), Australs (3-on-3), and custom two-team or four-team debate tournament setups.</p>
+    <!-- Deep Dive Feature Cards -->
+    <div class="row g-4 mb-5">
+      <div class="col-md-6 mb-4">
+        <div class="tc-card h-100 p-4">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="tc-stat-icon" style="background: #eef2ff; color: #4f46e5;">
+              <i data-feather="shuffle"></i>
+            </div>
+            <h3 class="tc-card-title fs-5 mb-0">Automated Pairing Engine</h3>
+          </div>
+          <p class="text-muted small">
+            Uses mathematical matching algorithms (Hungarian minimum-cost maximum bipartite matching) to generate draws. Handles power-pairing, side allocation equality, institutional conflict rules, and adjudicator clash detection automatically.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="tc-card h-100 p-4">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="tc-stat-icon" style="background: #ecfdf5; color: #10b981;">
+              <i data-feather="lock"></i>
+            </div>
+            <h3 class="tc-card-title fs-5 mb-0">Private URLs & Digital Ballots</h3>
+          </div>
+          <p class="text-muted small">
+            Generate secure personalized URLs for every judge and participant. Adjudicators can submit scores and feedback directly from their mobile phones without logging in or downloading an app.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="tc-card h-100 p-4">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="tc-stat-icon" style="background: #fffbeb; color: #d97706;">
+              <i data-feather="layers"></i>
+            </div>
+            <h3 class="tc-card-title fs-5 mb-0">Multi-Tenancy & Subdomains</h3>
+          </div>
+          <p class="text-muted small">
+            Isolate data across societies, clubs, and circuits. Each organization gets an independent portal, subdomain routing, custom logo, custom navigation, and isolated member permissions.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="tc-card h-100 p-4">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="tc-stat-icon" style="background: #f0f9ff; color: #0284c7;">
+              <i data-feather="bar-chart-2"></i>
+            </div>
+            <h3 class="tc-card-title fs-5 mb-0">Real-Time Break & Tab Engine</h3>
+          </div>
+          <p class="text-muted small">
+            Instantaneous calculations for open breaks and categorical breaks (ESL, EFL, Novice, High School). Configurable speaker score metrics, rankings, trimmed averages, and printable certificate sheets.
+          </p>
         </div>
       </div>
     </div>
-    <div class="col-md-6 mb-4">
-      <div class="card h-100 p-3 shadow-sm border-0">
-        <div class="card-body">
-          <h3 class="h4 font-weight-bold text-primary mb-3">🔒 Private URLs & Online Ballots</h3>
-          <p class="text-muted">Adjudicators and teams can receive unique, secure private links for online ballots and real-time score submissions.</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6 mb-4">
-      <div class="card h-100 p-3 shadow-sm border-0">
-        <div class="card-body">
-          <h3 class="h4 font-weight-bold text-primary mb-3">📊 Advanced Break Calculation</h3>
-          <p class="text-muted">Automatically calculate open and category breaks (e.g. ESL, EFL, Novice) with tiebreak configurations.</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6 mb-4">
-      <div class="card h-100 p-3 shadow-sm border-0">
-        <div class="card-body">
-          <h3 class="h4 font-weight-bold text-primary mb-3">🏢 Multi-Tenancy & Custom Domains</h3>
-          <p class="text-muted">Run multiple tournaments under dedicated subdomain portals or custom domains with fine-grained role permissions.</p>
-        </div>
+
+    <!-- Bottom CTA -->
+    <div class="tc-card p-4 text-center" style="background: #ffffff; border: 2px solid #4f46e5;">
+      <h3 class="font-weight-bold mb-2">Ready to run your debate tournament?</h3>
+      <p class="text-muted small mb-3">Create your portal in seconds or explore our flexible pricing plans.</p>
+      <div class="d-flex justify-content-center gap-2">
+        <a href="{% url 'accounts:register' %}" class="tc-btn tc-btn-primary font-weight-bold">
+          <i data-feather="zap"></i> Create Portal
+        </a>
+        <a href="{% url 'landing:pricing' %}" class="tc-btn tc-btn-outline font-weight-bold">
+          View Pricing
+        </a>
       </div>
     </div>
   </div>
-</div>
-{% endblock %}
+</main>
+{% endblock main-wrapper %}
