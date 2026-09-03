@@ -74,6 +74,13 @@ class TournamentFromUrlMixin:
         tenant = getattr(request, 'tenant', None) if request else None
         if tenant:
             tournament = get_object_or_404(Tournament, slug=slug, tenant=tenant)
+        elif getattr(settings, 'MULTI_TENANT_MODE', False):
+            if request and (getattr(request, 'is_platform_admin', False) or (
+                getattr(request, 'user', None) and request.user.is_authenticated and request.user.is_superuser
+            )):
+                tournament = get_object_or_404(Tournament, slug=slug)
+            else:
+                tournament = get_object_or_404(Tournament, slug=slug, tenant__isnull=True)
         else:
             tournament = get_object_or_404(Tournament, slug=slug)
         cache.set(key, tournament, None)

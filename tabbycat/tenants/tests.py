@@ -161,6 +161,38 @@ class TenantIsolationViewAndAPITestCase(TestCase):
             with self.assertRaises(Http404):
                 _ = view2.tournament
 
+    def test_tournament_from_url_mixin_tenant_isolation(self):
+        from django.contrib.auth.models import AnonymousUser
+        from tournaments.mixins import TournamentFromUrlMixin
+        from django.test import override_settings
+
+        class DummyUrlView(TournamentFromUrlMixin):
+            def __init__(self, request, kwargs):
+                self.request = request
+                self.kwargs = kwargs
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            # Tenant 1 accessing Tournament 1 -> OK
+            req1 = self.factory.get('/tourn-1/')
+            req1.tenant = self.tenant1
+            view1 = DummyUrlView(req1, {'tournament_slug': 'tourn-1'})
+            self.assertEqual(view1.tournament, self.tournament1)
+
+            # Tenant 2 accessing Tournament 1 -> 404
+            req2 = self.factory.get('/tourn-1/')
+            req2.tenant = self.tenant2
+            view2 = DummyUrlView(req2, {'tournament_slug': 'tourn-1'})
+            with self.assertRaises(Http404):
+                _ = view2.tournament
+
+            # Base domain (no tenant) accessing Tenant 1's tournament -> 404
+            req3 = self.factory.get('/tourn-1/')
+            req3.tenant = None
+            req3.user = AnonymousUser()
+            view3 = DummyUrlView(req3, {'tournament_slug': 'tourn-1'})
+            with self.assertRaises(Http404):
+                _ = view3.tournament
+
 
 class RenderSettingsTestCase(TestCase):
     def test_multi_tenant_parsing(self):
