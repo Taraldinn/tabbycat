@@ -33,7 +33,7 @@ def validate_tournament_slug(value):
 
 class Tournament(models.Model):
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE,
-        null=True, verbose_name=_("tenant"))  # null=True during migration only
+        null=True, blank=True, verbose_name=_("tenant"))
     name = models.CharField(max_length=100,
         verbose_name=_("name"),
         help_text=_("The full name, e.g. \"Australasian Intervarsity Debating Championships 2016\""))

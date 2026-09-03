@@ -51,3 +51,125 @@ class TenantMiddlewareAndRoutingTestCase(TestCase):
         )
         self.assertEqual(membership.role, TenantMembership.Role.MEMBER)
         self.assertFalse(membership.role == TenantMembership.Role.OWNER)
+
+
+class TenantIsolationViewAndAPITestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='iso_user1', password='Password123!')
+        self.user2 = User.objects.create_user(username='iso_user2', password='Password123!')
+        self.tenant1 = Tenant.objects.create(name="Tenant 1", slug="t1", owner=self.user1)
+        self.tenant2 = Tenant.objects.create(name="Tenant 2", slug="t2", owner=self.user2)
+
+        self.tournament1 = Tournament.objects.create(name="Tournament 1", slug="tourn-1", tenant=self.tenant1, active=True)
+        self.tournament2 = Tournament.objects.create(name="Tournament 2", slug="tourn-2", tenant=self.tenant2, active=True)
+        self.factory = RequestFactory()
+
+    def test_public_site_index_scoped_to_tenant(self):
+        from django.contrib.auth.models import AnonymousUser
+        from tournaments.views import PublicSiteIndexView
+        from django.test import override_settings
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            request = self.factory.get('/?redirect=false')
+            request.tenant = self.tenant1
+            request.user = AnonymousUser()
+            view = PublicSiteIndexView()
+            view.setup(request)
+            context = view.get_context_data()
+            self.assertIn(self.tournament1, context['tournaments'])
+            self.assertNotIn(self.tournament2, context['tournaments'])
+
+    def test_public_site_index_base_domain_no_leaks(self):
+        from django.contrib.auth.models import AnonymousUser
+        from tournaments.views import PublicSiteIndexView
+        from django.test import override_settings
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            request = self.factory.get('/?redirect=false')
+            request.tenant = None
+            request.user = AnonymousUser()
+            view = PublicSiteIndexView()
+            view.setup(request)
+            context = view.get_context_data()
+            self.assertEqual(list(context['tournaments']), [])
+            self.assertEqual(list(context['inactive']), [])
+
+    def test_public_site_index_single_tournament_redirect(self):
+        from django.contrib.auth.models import AnonymousUser
+        from tournaments.views import PublicSiteIndexView
+        from django.test import override_settings
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            request = self.factory.get('/')
+            request.tenant = self.tenant1
+            request.user = AnonymousUser()
+            response = PublicSiteIndexView.as_view()(request)
+            self.assertEqual(response.status_code, 302)
+            self.assertIn(self.tournament1.slug, response.url)
+
+    def test_api_tournament_viewset_queryset_scoped_to_tenant(self):
+        from api.views import TournamentViewSet
+        from django.test import override_settings
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            request = self.factory.get('/api/v1/tournaments/')
+            request.tenant = self.tenant1
+            request.user = self.user1
+            viewset = TournamentViewSet()
+            viewset.request = request
+            qs = viewset.get_queryset()
+            self.assertIn(self.tournament1, qs)
+            self.assertNotIn(self.tournament2, qs)
+
+    def test_api_tournament_viewset_base_domain_empty_for_anon(self):
+        from django.contrib.auth.models import AnonymousUser
+        from api.views import TournamentViewSet
+        from django.test import override_settings
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            request = self.factory.get('/api/v1/tournaments/')
+            request.tenant = None
+            request.user = AnonymousUser()
+            viewset = TournamentViewSet()
+            viewset.request = request
+            qs = viewset.get_queryset()
+            self.assertEqual(list(qs), [])
+
+    def test_tournament_api_mixin_cross_tenant_isolation(self):
+        from rest_framework.views import APIView
+        from api.mixins import TournamentAPIMixin
+        from django.test import override_settings
+
+        class DummyView(TournamentAPIMixin, APIView):
+            pass
+
+        with override_settings(MULTI_TENANT_MODE=True):
+            # Tenant 1 accessing Tournament 1 -> OK
+            req1 = self.factory.get('/api/v1/tournaments/tourn-1/')
+            req1.tenant = self.tenant1
+            view1 = DummyView()
+            view1.request = req1
+            view1.kwargs = {'tournament_slug': 'tourn-1'}
+            self.assertEqual(view1.tournament, self.tournament1)
+
+            # Tenant 2 accessing Tournament 1 -> 404
+            req2 = self.factory.get('/api/v1/tournaments/tourn-1/')
+            req2.tenant = self.tenant2
+            view2 = DummyView()
+            view2.request = req2
+            view2.kwargs = {'tournament_slug': 'tourn-1'}
+            with self.assertRaises(Http404):
+                _ = view2.tournament
+
+
+class RenderSettingsTestCase(TestCase):
+    def test_multi_tenant_parsing(self):
+        truthy = ['true', 'True', '1', 'yes', 'YES']
+        falsy = ['false', 'False', '0', 'no', 'disabled']
+        for val in truthy:
+            parsed = val.lower() in ('true', '1', 'yes')
+            self.assertTrue(parsed, f"Failed for {val}")
+        for val in falsy:
+            parsed = val.lower() in ('true', '1', 'yes')
+            self.assertFalse(parsed, f"Failed for {val}")
+

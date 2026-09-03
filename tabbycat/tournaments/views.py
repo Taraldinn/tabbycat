@@ -42,20 +42,26 @@ class PublicSiteIndexView(WarnAboutDatabaseUseMixin, WarnAboutLegacySendgridConf
     template_name = 'site_index.html'
 
     def get(self, request, *args, **kwargs):
-        tournaments = Tournament.objects.all()
-        if hasattr(request, 'tenant') and request.tenant:
-            tournaments = tournaments.filter(tenant=request.tenant)
+        is_multi_tenant = getattr(settings, 'MULTI_TENANT_MODE', False)
+        tenant = getattr(request, 'tenant', None)
+
+        if is_multi_tenant and not tenant:
+            if request.GET.get('redirect', '') == 'false':
+                return super().get(request, *args, **kwargs)
+            from landing.views import LandingPageView
+            return LandingPageView.as_view()(request, *args, **kwargs)
+
+        if tenant:
+            tournaments = Tournament.objects.filter(tenant=tenant)
+        elif is_multi_tenant:
+            tournaments = Tournament.objects.none()
+        else:
+            tournaments = Tournament.objects.all()
 
         if request.GET.get('redirect', '') == 'false':
             return super().get(request, *args, **kwargs)
-            
-        is_multi_tenant = getattr(settings, 'MULTI_TENANT_MODE', False)
-        
-        if is_multi_tenant and not getattr(request, 'tenant', None):
-            from landing.views import LandingPageView
-            return LandingPageView.as_view()(request, *args, **kwargs)
-            
-        if tournaments.count() == 1 and not request.user.is_authenticated and not is_multi_tenant:
+
+        if tournaments.count() == 1 and not request.user.is_authenticated:
             logger.debug('One tournament only, user is: %s, redirecting to tournament-public-index', request.user)
             return redirect_tournament('tournament-public-index', tournaments.first())
         elif not tournaments.exists() and not User.objects.exists() and not is_multi_tenant:
@@ -65,13 +71,19 @@ class PublicSiteIndexView(WarnAboutDatabaseUseMixin, WarnAboutLegacySendgridConf
             return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        tournaments = Tournament.objects.all()
-        if hasattr(self.request, 'tenant') and self.request.tenant:
-            tournaments = tournaments.filter(tenant=self.request.tenant)
-            
+        is_multi_tenant = getattr(settings, 'MULTI_TENANT_MODE', False)
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            tournaments = Tournament.objects.filter(tenant=tenant)
+        elif is_multi_tenant:
+            tournaments = Tournament.objects.none()
+        else:
+            tournaments = Tournament.objects.all()
+
         kwargs['tournaments'] = tournaments.filter(active=True)
         kwargs['inactive'] = tournaments.filter(active=False)
         return super().get_context_data(**kwargs)
+
 
 
 class TournamentPublicHomeView(CacheMixin, TournamentMixin, TemplateView):
@@ -252,7 +264,19 @@ class CreateTournamentView(AdministratorMixin, WarnAboutDatabaseUseMixin, Create
         ]
         kwargs['demo_datasets'] = demo_datasets
         demo_slugs = [slug for slug, _ in demo_datasets]
-        kwargs['preexisting'] = Tournament.objects.filter(slug__in=demo_slugs).values_list('slug', flat=True)
+
+        tenant = getattr(self.request, 'tenant', None)
+        filter_kwargs = {'slug__in': demo_slugs}
+        if tenant:
+            filter_kwargs['tenant'] = tenant
+        kwargs['preexisting'] = Tournament.objects.filter(**filter_kwargs).values_list('slug', flat=True)
+
+        if tenant and tenant.max_tournaments > 0:
+            current = tenant.tournament_set.count()
+            kwargs['tenant_tournament_count'] = current
+            kwargs['tenant_max_tournaments'] = tenant.max_tournaments
+            kwargs['tenant_limit_reached'] = current >= tenant.max_tournaments
+
         return super().get_context_data(**kwargs)
 
     def form_valid(self, form):
@@ -278,6 +302,9 @@ class ConfigureTournamentView(AdministratorMixin, TournamentMixin, UpdateView):
     form_class = TournamentConfigureForm
     template_name = "configure_tournament.html"
     slug_url_kwarg = 'tournament_slug'
+
+    def get_object(self, queryset=None):
+        return self.tournament
 
     def get_success_url(self):
         t = self.tournament

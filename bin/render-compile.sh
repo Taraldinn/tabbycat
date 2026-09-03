@@ -2,25 +2,34 @@
 # exit on error
 set -o errexit
 
-echo "-----> Install dependencies"
+echo "-----> Install Python dependencies"
 python -m pip install pipenv
 pipenv install --system
 
-echo "-----> I'm post-compile hook"
-cd ./tabbycat/
+if [ "${IS_WORKER:-0}" = "1" ]; then
+    echo "-----> Worker build complete (skipping migrations & asset compilation)"
+    exit 0
+fi
 
-echo "-----> Running database migration"
+echo "-----> Running database migrations"
+cd ./tabbycat/
 python manage.py migrate --noinput
+
+echo "-----> Creating DB cache table (skipped if USE_REDIS=1)"
+if [ "${USE_REDIS:-0}" = "0" ]; then
+    python manage.py createcachetable
+fi
 
 echo "-----> Running dynamic preferences checks"
 python manage.py checkpreferences
 
-echo "-----> Running static asset compilation"
-npm install -g @vue/cli-service-global
+echo "-----> Building frontend assets"
+cd ..
 npm install
 npm run build
 
-echo "-----> Running static files compilation"
+echo "-----> Collecting static files"
+cd ./tabbycat/
 python manage.py collectstatic --noinput
 
-echo "-----> Post-compile done"
+echo "-----> Build complete"

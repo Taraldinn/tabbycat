@@ -2,13 +2,13 @@ databases:
   - name: tabbycat_database
     databaseName: tabbycat
     user: tabbycat
-    plan: free
+    plan: free  # Upgrade to 'starter' or higher for production
 
 services:
   - type: web
-    name: tabbycat_website
+    name: tabbycat_web
     env: python
-    plan: free
+    plan: free  # Upgrade to 'starter' for production
     region: oregon
     buildCommand: "./bin/render-compile.sh"
     startCommand: "npm run render-serve"
@@ -17,34 +17,127 @@ services:
         fromDatabase:
           name: tabbycat_database
           property: connectionString
-      - key: REDIS_HOST
+      - key: REDIS_URL
         fromService:
           type: redis
           name: tabbycat_redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: tabbycat_redis
-          property: port
+          property: connectionString
       - key: DJANGO_SECRET_KEY
         generateValue: true
+
+      # Python version — must match Pipfile [requires]
       - key: PYTHON_VERSION
-        value: "3.12.3"
+        value: "3.11.9"
+
+      # Gunicorn workers
       - key: WEB_CONCURRENCY
         value: 4
-      - key: TAB_DIRECTOR_EMAIL
-        sync: false
-      - key: TIME_ZONE
-        sync: false
+
+      # Render flags
       - key: ON_RENDER
         value: true
       - key: USING_NGINX
-        value: 0 # Not 'false'; is cast
+        value: 0  # Not 'false'; is cast to int
+
+      # Multi-tenancy
+      - key: MULTI_TENANT_MODE
+        value: true
+      - key: TABBYCAT_BASE_DOMAIN
+        sync: false  # Set in Render dashboard: e.g. tabbycatbd.com
+      - key: TENANT_BASE_DOMAIN
+        sync: false  # Set in Render dashboard: e.g. tabbycatbd.com
+
+      # HTTPS / Security (required for production cookies)
+      - key: DISABLE_HTTPS_REDIRECTS
+        value: ""  # Leave blank to enable SSL redirect; set 'disable' to turn off
+
+      # Sentry (set your own DSN or leave DISABLE_SENTRY=true)
+      - key: DISABLE_SENTRY
+        value: true
+      - key: SENTRY_DSN
+        sync: false  # Optional: set your own Sentry DSN in the dashboard
+
+      # Email (optional — for notifications)
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: EMAIL_USE_TLS
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+
+      # Optional tab-director email for error reporting
+      - key: TAB_DIRECTOR_EMAIL
+        sync: false
+      - key: TIME_ZONE
+        sync: false  # e.g. Asia/Dhaka
+
+  - type: worker
+    name: tabbycat_worker
+    env: python
+    plan: free  # Upgrade to 'starter' for production
+    region: oregon
+    buildCommand: "./bin/render-compile.sh"
+    startCommand: "python manage.py runworker notifications adjallocation venues"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tabbycat_database
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: tabbycat_redis
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        fromService:
+          type: web
+          name: tabbycat_web
+          envVarKey: DJANGO_SECRET_KEY
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ON_RENDER
+        value: true
+      - key: IS_WORKER
+        value: 1
+      - key: MULTI_TENANT_MODE
+        value: true
+      - key: TABBYCAT_BASE_DOMAIN
+        sync: false
+      - key: TENANT_BASE_DOMAIN
+        sync: false
+      - key: DISABLE_SENTRY
+        value: true
+      - key: TIME_ZONE
+        sync: false
+      # Email settings for sending notifications from worker
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: EMAIL_USE_TLS
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+
   - type: redis
     name: tabbycat_redis
-    ipAllowList: # required
-      - source: 0.0.0.0
+    ipAllowList:
+      - source: 0.0.0.0/0
         description: everywhere
-    plan: free
-    maxmemoryPolicy: allkeys-lru # (default)
+    plan: free  # Upgrade to 'starter' for persistent Redis in production
+    maxmemoryPolicy: allkeys-lru
+

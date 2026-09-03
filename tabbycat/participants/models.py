@@ -37,7 +37,7 @@ class InstitutionManager(LookupByNameFieldsMixin, models.Manager):
 
 class Institution(models.Model):
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE,
-        null=True, verbose_name=_("tenant"))  # null=True during migration only
+        null=True, blank=True, verbose_name=_("tenant"))
     name = models.CharField(max_length=100,
         verbose_name=_("name"),
         # Translators: Change the examples to institutions native to your language; keep consistent between strings

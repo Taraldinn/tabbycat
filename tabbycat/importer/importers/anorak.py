@@ -110,6 +110,7 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
             self._import(f, pm.Region, region_interpreter, expect_unique=False)
 
         institution_interpreter = make_interpreter(
+            tenant=getattr(self.tournament, 'tenant', None),
             region=lambda x: pm.Region.objects.get(name=x),
         )
 
@@ -165,7 +166,7 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
 
         team_interpreter_part = make_interpreter(
             tournament=self.tournament,
-            institution=pm.Institution.objects.lookup,
+            institution=self.lookup_institution,
         )
 
         def team_interpreter(lineno, line):
@@ -178,14 +179,16 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
 
         if create_dummy_speakers:
             def speakers_interpreter(lineno, line):
-                team = teams[lineno]
+                team = teams.get(lineno)
+                if not team:
+                    return
                 for name in ["1st Speaker", "2nd Speaker", "3rd Speaker", "Reply Speaker"]:
                     yield dict(name=name, team=team)
             self._import(f, pm.Speaker, speakers_interpreter)
 
         def own_team_institution_conflict_interpreter(lineno, line):
-            team = teams[lineno]
-            if team.institution is not None:
+            team = teams.get(lineno)
+            if team is not None and team.institution is not None:
                 return {
                     'team': team,
                     'institution': team.institution,
@@ -207,7 +210,7 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
                     'short_reference':  line['team_name'][:34],
                 }
                 if line.get('institution'):
-                    interpreted['institution'] = pm.Institution.objects.lookup(line['institution'])
+                    interpreted['institution'] = self.lookup_institution(line['institution'])
                 if line.get('use_institution_prefix'):
                     interpreted['use_institution_prefix'] = line['use_institution_prefix']
                 return interpreted
@@ -230,7 +233,7 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         )
 
         def speaker_interpreter(lineno, line):
-            institution = pm.Institution.objects.lookup(line['institution']) if line.get('institution') else None
+            institution = self.lookup_institution(line['institution']) if line.get('institution') else None
             line['team'] = pm.Team.objects.get(
                 institution=institution, reference=line['team_name'], tournament=self.tournament)
             line = speaker_interpreter_part(lineno, line)
@@ -245,7 +248,7 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         """
 
         adjudicator_interpreter = make_interpreter(
-            institution=pm.Institution.objects.lookup,
+            institution=self.lookup_institution,
             tournament=self.tournament,
             gender=self.lookup_gender,
             DELETE=['team_conflicts', 'institution_conflicts', 'adj_conflicts'],
@@ -253,8 +256,8 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         adjudicators = self._import(f, pm.Adjudicator, adjudicator_interpreter)
 
         def base_score_interpreter(lineno, line):
-            adjudicator = adjudicators[lineno]
-            if line['base_score']:
+            adjudicator = adjudicators.get(lineno)
+            if adjudicator and line['base_score']:
                 return {
                     'adjudicator' : adjudicator,
                     'score'       : line['base_score'],
@@ -263,8 +266,8 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         self._import(f, fm.AdjudicatorBaseScoreHistory, base_score_interpreter)
 
         def own_institution_conflict_interpreter(lineno, line):
-            adjudicator = adjudicators[lineno]
-            if adjudicator.institution is not None:
+            adjudicator = adjudicators.get(lineno)
+            if adjudicator and adjudicator.institution is not None:
                 return {
                     'adjudicator': adjudicator,
                     'institution': adjudicator.institution,
@@ -274,10 +277,12 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         def institution_conflict_interpreter(lineno, line):
             if not line.get('institution_conflicts'):
                 return None
-            adjudicator = adjudicators[lineno]
+            adjudicator = adjudicators.get(lineno)
+            if not adjudicator:
+                return None
             for institution_name in line['institution_conflicts'].split(","):
                 institution_name = institution_name.strip()
-                institution = pm.Institution.objects.lookup(institution_name)
+                institution = self.lookup_institution(institution_name)
                 yield {
                     'adjudicator' : adjudicator,
                     'institution' : institution,
@@ -287,10 +292,12 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         def team_conflict_interpreter(lineno, line):
             if not line.get('team_conflicts'):
                 return
-            adjudicator = adjudicators[lineno]
+            adjudicator = adjudicators.get(lineno)
+            if not adjudicator:
+                return
             for team_name in line['team_conflicts'].split(","):
                 team_name = team_name.strip()
-                team = pm.Team.objects.lookup(team_name)
+                team = pm.Team.objects.lookup(team_name, tournament=self.tournament)
                 yield {
                     'adjudicator' : adjudicator,
                     'team'        : team,
@@ -300,10 +307,12 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         def adj_conflict_interpreter(lineno, line):
             if not line.get('adj_conflicts'):
                 return
-            adjudicator = adjudicators[lineno]
+            adjudicator = adjudicators.get(lineno)
+            if not adjudicator:
+                return
             for adj_name in line['adj_conflicts'].split(","):
                 adj_name = adj_name.strip()
-                conflicted_adj = pm.Adjudicator.objects.get(name=adj_name)
+                conflicted_adj = pm.Adjudicator.objects.get(name=adj_name, tournament=self.tournament)
                 yield {
                     'adjudicator1' : adjudicator,
                     'adjudicator2' : conflicted_adj,
@@ -320,7 +329,9 @@ class AnorakTournamentDataImporter(BaseTournamentDataImporter):
         def round_motions_interpreter(lineno, line):
             if not line.get('rounds'):
                 return
-            motion = motions[lineno]
+            motion = motions.get(lineno)
+            if not motion:
+                return
             for round_name, seq in zip(line['rounds'].split(";"), line.get('seq', "").split(";")):
                 yield {
                     'seq'    : seq or 1,

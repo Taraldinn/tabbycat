@@ -52,12 +52,26 @@ class Command(BaseCommand):
                             help="Override tournament name. (Default: use name of directory.)")
         parser.add_argument('--short-name', type=str, action='store', default=None,
                             help="Override tournament short name. (Default: use name of directory.)")
+        parser.add_argument('--tenant', default=None,
+                            help="Tenant slug or instance to associate tournament with.")
 
     def handle(self, *args, **options):
         self.options = options
         self.verbosity = options['verbosity']
         self.color = not options['no_color']
         self.dirpath = self.get_data_path(options['path'])
+
+        tenant_option = options.get('tenant')
+        if tenant_option and hasattr(tenant_option, 'pk'):
+            self.tenant = tenant_option
+        elif isinstance(tenant_option, str):
+            from tenants.models import Tenant
+            try:
+                self.tenant = Tenant.objects.get(slug=tenant_option)
+            except Tenant.DoesNotExist:
+                raise CommandError(f"Tenant '{tenant_option}' does not exist.")
+        else:
+            self.tenant = None
 
         self.clean_shared_instances()
         self.make_tournament()
@@ -188,8 +202,11 @@ class Command(BaseCommand):
         """Removes shared instances from the database, depending on what options
         the user selected."""
         if self.options['clean_shared'] or self.options['delete_institutions']:
-            self._warning("Deleting all institutions from the database")
-            pm.Institution.objects.all().delete()
+            self._warning("Deleting institutions from the database")
+            inst_qs = pm.Institution.objects.all()
+            if self.tenant is not None:
+                inst_qs = inst_qs.filter(tenant=self.tenant)
+            inst_qs.delete()
 
         if self.options['clean_shared'] or self.options['delete_venue_categories']:
             self._warning("Deleting all room categories from the database")
@@ -234,7 +251,10 @@ class Command(BaseCommand):
         """Checks if a tournament exists. If --keep-existing was not used,
         deletes it. If it was used, and the tournament does not exist, raises
         and error."""
-        exists = Tournament.objects.filter(slug=slug).exists()
+        filter_kwargs = {'slug': slug}
+        if self.tenant is not None:
+            filter_kwargs['tenant'] = self.tenant
+        exists = Tournament.objects.filter(**filter_kwargs).exists()
         if exists and not self.options['keep_existing'] and not self.options['items']:
             if not self.options['force']:
                 self._print_loud("WARNING! A tournament with slug '" + slug + "' already exists.")
@@ -242,8 +262,11 @@ class Command(BaseCommand):
                 response = input("Are you sure? (yes/no) ")
                 if response != "yes":
                     raise CommandError("Cancelled by user.")
-            DebateTeam.objects.filter(team__tournament__slug=slug).delete()  # protected from cascade deletion
-            Tournament.objects.filter(slug=slug).delete()
+            dt_filter = {'team__tournament__slug': slug}
+            if self.tenant is not None:
+                dt_filter['team__tournament__tenant'] = self.tenant
+            DebateTeam.objects.filter(**dt_filter).delete()  # protected from cascade deletion
+            Tournament.objects.filter(**filter_kwargs).delete()
 
         elif not exists and self.options['keep_existing']:
             raise CommandError("Used --keep-existing, but tournament %r does not exist" % slug)
@@ -251,11 +274,14 @@ class Command(BaseCommand):
     def create_tournament(self, slug, name, short_name):
         """Creates, saves and returns a tournament with the given slug.
         Raises exception on error."""
+        filter_kwargs = {'slug': slug}
+        if self.tenant is not None:
+            filter_kwargs['tenant'] = self.tenant
         try:
-            existing = Tournament.objects.get(slug=slug)
+            existing = Tournament.objects.get(**filter_kwargs)
         except Tournament.DoesNotExist:
             self._print_stage("Creating tournament %r" % slug)
-            t = Tournament(name=name, short_name=short_name, slug=slug)
+            t = Tournament(name=name, short_name=short_name, slug=slug, tenant=self.tenant)
             t.save()
             return t
         else:

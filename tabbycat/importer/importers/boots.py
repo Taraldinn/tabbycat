@@ -92,7 +92,10 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
                     return {'name': line['region']}  # otherwise return None
             self._import(f, pm.Region, region_interpreter, expect_unique=False)
 
-        interpreter = make_interpreter(region=lambda x: pm.Region.objects.get(name=x))
+        interpreter = make_interpreter(
+            tenant=getattr(self.tournament, 'tenant', None),
+            region=lambda x: pm.Region.objects.get(name=x),
+        )
         self._import(f, pm.Institution, interpreter)
 
     def import_break_categories(self, f):
@@ -105,7 +108,7 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
 
     def import_adjudicators(self, f):
         interpreter = make_interpreter(
-            institution=pm.Institution.objects.lookup,
+            institution=self.lookup_institution,
             tournament=self.tournament,
             gender=self.lookup_gender,
             DELETE=['category', lambda x: x.startswith('available:')],
@@ -113,8 +116,8 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
         adjudicators = self._import(f, pm.Adjudicator, interpreter)
 
         def own_institution_conflict_interpreter(lineno, line):
-            adjudicator = adjudicators[lineno]
-            if adjudicator.institution is not None:
+            adjudicator = adjudicators.get(lineno)
+            if adjudicator and adjudicator.institution is not None:
                 return {
                     'adjudicator': adjudicator,
                     'institution': adjudicator.institution,
@@ -124,14 +127,17 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
         content_type = ContentType.objects.get_for_model(pm.Adjudicator)
 
         def adjudicator_availability_interpreter(lineno, line):
+            adjudicator = adjudicators.get(lineno)
+            if not adjudicator:
+                return
             availability_columns = [col for col in line if col.startswith('available:')]
             for col in availability_columns:
                 round_name = col[10:]  # length of 'available:'
-                round = tm.Round.objects.lookup(round_name)
+                round = tm.Round.objects.lookup(round_name, tournament=self.tournament)
                 if convert_bool(line[col]):
                     yield {
                         'content_type': content_type,
-                        'object_id': adjudicators[lineno].id,
+                        'object_id': adjudicator.id,
                         'round': round,
                     }
 
@@ -169,8 +175,8 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
         set_emoji(teams.values(), self.tournament)
 
         def own_team_institution_conflict_interpreter(lineno, line):
-            team = teams[lineno]
-            if team.institution is not None:
+            team = teams.get(lineno)
+            if team is not None and team.institution is not None:
                 return {
                     'team': team,
                     'institution': team.institution,
@@ -178,19 +184,25 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
         self._import(f, am.TeamInstitutionConflict, own_team_institution_conflict_interpreter)
 
         def break_category_interpreter(lineno, line):
+            team = teams.get(lineno)
+            if not team:
+                return
             if line.get('break_category'):
                 for category in line['break_category'].split('/'):
                     yield {
-                        'team': teams[lineno],
+                        'team': team,
                         'breakcategory': self.tournament.breakcategory_set.get(slug=category),
                     }
         self._import(f, pm.Team.break_categories.through, break_category_interpreter)
 
         def speakers_interpreter(lineno, line):
+            team = teams.get(lineno)
+            if not team:
+                return
             for i in [1, 2]:
                 subline = {field: line.get('speaker%d_%s' % (i, field)) for field in ['name', 'email', 'gender']}
                 subline['gender'] = self.lookup_gender(subline['gender'])
-                subline['team'] = teams[lineno]
+                subline['team'] = team
                 yield subline
         speakers = self._import(f, pm.Speaker, speakers_interpreter)
 
@@ -218,10 +230,13 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
             self._import(f, vm.VenueCategory, venue_category_interpreter, expect_unique=False)
 
         def venue_category_venue_interpreter(lineno, line):
+            venue = venues.get(lineno)
+            if not venue:
+                return
             if line.get('category'):
                 return {
                     'venuecategory': vm.VenueCategory.objects.get(name=line['category']),
-                    'venue': venues[lineno],
+                    'venue': venue,
                 }
 
         self._import(f, vm.VenueCategory.venues.through, venue_category_venue_interpreter)
@@ -229,14 +244,17 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
         content_type = ContentType.objects.get_for_model(vm.Venue)
 
         def venue_availability_interpreter(lineno, line):
+            venue = venues.get(lineno)
+            if not venue:
+                return
             availability_columns = [col for col in line if col.startswith('available:')]
             for col in availability_columns:
                 round_name = col[10:]  # length of 'available:'
-                round = tm.Round.objects.lookup(round_name)
+                round = tm.Round.objects.lookup(round_name, tournament=self.tournament)
                 if convert_bool(line[col]):
                     yield {
                         'content_type': content_type,
-                        'object_id': venues[lineno].id,
+                        'object_id': venue.id,
                         'round': round,
                     }
 
@@ -251,7 +269,7 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
 
     def import_institution_conflicts(self, f):
         interpreter = make_interpreter(
-            institution=pm.Institution.objects.lookup,
+            institution=self.lookup_institution,
             adjudicator=self._adj_lookup,
         )
         self._import(f, am.AdjudicatorInstitutionConflict, interpreter)
@@ -266,7 +284,7 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
     def import_team_institution_conflicts(self, f):
         interpreter = make_interpreter(
             team=lambda x: pm.Team.objects.lookup(name=x, tournament=self.tournament),
-            institution=pm.Institution.objects.lookup,
+            institution=self.lookup_institution,
         )
         self._import(f, am.TeamInstitutionConflict, interpreter)
 
@@ -290,7 +308,9 @@ class BootsTournamentDataImporter(BaseTournamentDataImporter):
         def round_motions_interpreter(lineno, line):
             if not line.get('rounds'):
                 return
-            motion = motions[lineno]
+            motion = motions.get(lineno)
+            if not motion:
+                return
             for round_name in line['rounds'].split(";"):
                 yield {
                     'seq'    : 1,

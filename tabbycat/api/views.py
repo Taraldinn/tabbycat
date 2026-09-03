@@ -116,7 +116,11 @@ class APIV1RootView(PublicAPIMixin, GenericAPIView):
 class TournamentViewSet(PublicAPIMixin, APILogActionMixin, ModelViewSet):
     # Don't use TournamentAPIMixin here, it's not filtering objects by tournament.
     serializer_class = serializers.TournamentSerializer
-    
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'tournament_slug'
+    action_log_type_created = ActionLogEntry.ActionType.TOURNAMENT_CREATE
+    action_log_type_updated = ActionLogEntry.ActionType.TOURNAMENT_EDIT
+
     def get_queryset(self):
         qs = Tournament.objects.all().prefetch_related(
             'breakcategory_set',
@@ -124,14 +128,23 @@ class TournamentViewSet(PublicAPIMixin, APILogActionMixin, ModelViewSet):
                 queryset=Round.objects.filter(completed=False).annotate(Count('debate')).order_by('seq'),
                 to_attr='current_round_set'),
         )
-        if hasattr(self.request, 'tenant') and self.request.tenant:
-            return qs.filter(tenant=self.request.tenant)
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        elif getattr(settings, 'MULTI_TENANT_MODE', False):
+            if getattr(self.request, 'is_platform_admin', False) or (
+                getattr(self.request, 'user', None) and self.request.user.is_authenticated and self.request.user.is_superuser
+            ):
+                return qs
+            return qs.none()
         return qs
-    serializer_class = serializers.TournamentSerializer
-    lookup_field = 'slug'
-    lookup_url_kwarg = 'tournament_slug'
-    action_log_type_created = ActionLogEntry.ActionType.TOURNAMENT_CREATE
-    action_log_type_updated = ActionLogEntry.ActionType.TOURNAMENT_EDIT
+
+    def lookup_kwargs(self):
+        kwargs = super().lookup_kwargs()
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            kwargs['tenant'] = tenant
+        return kwargs
 
 
 @extend_schema(tags=['tournaments'], parameters=[tournament_parameter])

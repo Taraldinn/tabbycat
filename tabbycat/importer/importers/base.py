@@ -166,6 +166,15 @@ class BaseTournamentDataImporter(object):
         self.counts = Counter()
         self.errors = TournamentDataImporterError()
 
+    def lookup_institution(self, name):
+        import participants.models as pm
+        if getattr(self.tournament, 'tenant', None):
+            try:
+                return pm.Institution.objects.lookup(name, tenant=self.tournament.tenant)
+            except pm.Institution.DoesNotExist:
+                pass
+        return pm.Institution.objects.lookup(name)
+
     def _import(self, csvfile, model, interpreter=make_interpreter(), expect_unique=None):
         """Parses the object given in f, using the callable interpreter to parse
         each line, and passing the arguments to the given model's constructor.
@@ -229,7 +238,7 @@ class BaseTournamentDataImporter(object):
                 if isinstance(kwargs_list, GeneratorType):
                     kwargs_list = list(kwargs_list) # force evaluation
             except (ObjectDoesNotExist, MultipleObjectsReturned, ValueError,
-                    TypeError, IndexError) as e:
+                    TypeError, IndexError, KeyError) as e:
                 message = "Couldn't parse line: " + str(e)
                 errors.add(lineno, model, message)
                 continue

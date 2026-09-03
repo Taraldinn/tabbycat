@@ -58,7 +58,7 @@ class TournamentStartForm(ModelForm):
     @staticmethod
     def add_default_permission_groups(tournament: Tournament):
         for group in all_groups():
-            Group.objects.create(name=group.name, permissions=group.permissions, tournament=tournament)
+            Group.objects.get_or_create(name=group.name, tournament=tournament, defaults={'permissions': group.permissions})
 
     def save(self):
         tournament = super(TournamentStartForm, self).save()

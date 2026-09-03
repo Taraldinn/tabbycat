@@ -1,5 +1,6 @@
 import operator
 
+from django.conf import settings
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAdminUser
 
@@ -42,7 +43,18 @@ class TournamentAPIMixin(APILogActionMixin):
     @property
     def tournament(self):
         if not hasattr(self, "_tournament"):
-            self._tournament = get_object_or_404(Tournament, slug=self.kwargs['tournament_slug'])
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                self._tournament = get_object_or_404(Tournament, slug=self.kwargs['tournament_slug'], tenant=tenant)
+            elif getattr(settings, 'MULTI_TENANT_MODE', False):
+                if getattr(self.request, 'is_platform_admin', False) or (
+                    getattr(self.request, 'user', None) and self.request.user.is_authenticated and self.request.user.is_superuser
+                ):
+                    self._tournament = get_object_or_404(Tournament, slug=self.kwargs['tournament_slug'])
+                else:
+                    self._tournament = get_object_or_404(Tournament, slug=self.kwargs['tournament_slug'], tenant__isnull=True)
+            else:
+                self._tournament = get_object_or_404(Tournament, slug=self.kwargs['tournament_slug'])
         return self._tournament
 
     def lookup_kwargs(self):

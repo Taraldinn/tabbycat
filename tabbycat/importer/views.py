@@ -7,7 +7,7 @@ from django.core import management
 from django.forms import modelformset_factory
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _, ngettext
 from django.views import View
@@ -239,9 +239,31 @@ class LoadDemoView(AdministratorMixin, PostOnlyRedirectView):
         if source not in ['minimal8team', 'australs24team', 'bp88team']:
             return HttpResponseBadRequest("%s isn't a demo dataset" % source)
 
+        tenant = getattr(request, 'tenant', None)
+        if tenant:
+            from tenants.limits import TenantLimitEnforcer, TenantLimitExceeded
+            # If the tournament slug already exists for this tenant, loading demo
+            # replaces the existing tournament rather than adding a new one.
+            if not Tournament.objects.filter(slug=source, tenant=tenant).exists():
+                try:
+                    TenantLimitEnforcer.check_tournament_limit(tenant)
+                except TenantLimitExceeded as e:
+                    messages.warning(request, mark_safe(
+                        f"<strong>{_('Tournament Limit Reached')}:</strong> {e} "
+                        f"<a href='{reverse('accounts:dashboard')}' class='alert-link'>{_('Manage tournaments or upgrade your plan')} &rarr;</a>"
+                    ))
+                    return redirect('tabbycat-index')
+
         try:
             management.call_command(importtournament.Command(), source,
+                                    tenant=tenant,
                                     force=True, strict=False, encoding='utf-8')
+        except TenantLimitExceeded as e:
+            messages.warning(self.request, mark_safe(
+                f"<strong>{_('Plan Limit Reached')}:</strong> {e} "
+                f"<a href='{reverse('accounts:dashboard')}' class='alert-link'>{_('Manage data or upgrade plan in the Client Portal')} &rarr;</a>"
+            ))
+            return redirect('tabbycat-index')
         except TournamentDataImporterError as e:
             messages.error(self.request, mark_safe(_(
                 "<p>There were one or more errors creating the demo tournament. "
@@ -251,11 +273,18 @@ class LoadDemoView(AdministratorMixin, PostOnlyRedirectView):
             ) + "<ul><li><i>" + "</i></li><li><i>".join(e.itermessages()) + "</i></li></ul>"))
             logger.error("Error importing demo tournament: " + str(e))
             return redirect('tabbycat-index')
+        except Exception as e:
+            messages.error(self.request, _("Error loading demo tournament: %s") % str(e))
+            logger.exception("Unexpected error importing demo tournament: " + str(e))
+            return redirect('tabbycat-index')
         else:
             messages.success(self.request, _("Created new demo tournament. You "
                 "can now configure it below."))
 
-        new_tournament = Tournament.objects.get(slug=source)
+        filter_kwargs = {'slug': source}
+        if tenant:
+            filter_kwargs['tenant'] = tenant
+        new_tournament = Tournament.objects.get(**filter_kwargs)
         return redirect_tournament('tournament-configure', tournament=new_tournament)
 
 
