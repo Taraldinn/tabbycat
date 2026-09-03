@@ -3,8 +3,12 @@
 set -o errexit
 
 echo "-----> Install Python dependencies"
-python -m pip install pipenv
-pipenv install --system
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+else
+    python -m pip install pipenv
+    pipenv install --system
+fi
 
 if [ "${IS_WORKER:-0}" = "1" ]; then
     echo "-----> Worker build complete (skipping migrations & asset compilation)"
