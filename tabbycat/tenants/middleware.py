@@ -20,7 +20,11 @@ class TenantMiddleware:
         request.is_platform_admin = False
 
         if host in (base_domain, 'localhost', '127.0.0.1', '0.0.0.0', 'testserver'):
-            # Landing page
+            # Landing page / base domain — no tenant
+            pass
+        elif host.endswith('.onrender.com'):
+            # Render's own internal hostname (e.g. tabbycat-web.onrender.com)
+            # Treat as landing/admin — no tenant isolation needed
             pass
         elif host in (f'www.{base_domain}', 'www.localhost'):
             # Redirect www to bare domain

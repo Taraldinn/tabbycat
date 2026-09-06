@@ -24,11 +24,12 @@ RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# Require HTTPS in production (set DISABLE_HTTPS_REDIRECTS=disable to turn off)
-if os.environ.get('DISABLE_HTTPS_REDIRECTS', '') != 'disable':
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+# NOTE: Do NOT set SECURE_SSL_REDIRECT=True with Daphne/ASGI on Render.
+# Render's reverse proxy already enforces HTTPS. Setting it in Django causes
+# AssertionError in SecurityMiddleware's ASGI scope handling.
+# We still set the cookie flags since Render is always HTTPS.
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # ==============================================================================
 # Multi-tenancy

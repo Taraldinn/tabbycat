@@ -47,10 +47,6 @@ services:
       - key: TENANT_BASE_DOMAIN
         sync: false  # Set in Render dashboard: e.g. tabbycatbd.com
 
-      # HTTPS / Security (required for production cookies)
-      - key: DISABLE_HTTPS_REDIRECTS
-        value: ""  # Leave blank to enable SSL redirect; set 'disable' to turn off
-
       # Sentry (set your own DSN or leave DISABLE_SENTRY=true)
       - key: DISABLE_SENTRY
         value: true
