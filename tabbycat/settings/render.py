@@ -33,6 +33,8 @@ CSRF_COOKIE_SECURE = True
 
 # Prevent 500 crashes if an unhashed/missing static file is requested
 WHITENOISE_MANIFEST_STRICT = False
+# Serve root files (robots.txt, favicon.ico, navigatorPush.service.js) via WhiteNoise
+WHITENOISE_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'root')
 
 # ==============================================================================
 # Multi-tenancy

@@ -41,6 +41,13 @@ class RegistrationTestCase(TestCase):
         )
         self.client = Client()
 
+    def test_registration_get_view_without_plans_renders_200(self):
+        # Delete plans to simulate fresh database
+        Plan.objects.all().delete()
+        res = self.client.get(reverse('accounts:register'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "No plans are currently active")
+
     def test_registration_with_paid_plan_success(self):
         payload = {
             'first_name': 'Abrar',

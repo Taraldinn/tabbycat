@@ -19,6 +19,12 @@ echo "-----> Running database migrations"
 cd ./tabbycat/
 python manage.py migrate --noinput
 
+echo "-----> Seeding demo pricing plans"
+python manage.py seed_demo_plans
+
+echo "-----> Ensuring default superuser exists"
+python manage.py setup_admin_superuser
+
 echo "-----> Creating DB cache table (skipped if USE_REDIS=1)"
 if [ "${USE_REDIS:-0}" = "0" ]; then
     python manage.py createcachetable

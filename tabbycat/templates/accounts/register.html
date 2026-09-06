@@ -190,6 +190,10 @@
                 </div>
               </div>
             </div>
+            {% empty %}
+            <div class="col-12 text-center py-4">
+              <p class="text-muted mb-0">No plans are currently active. Please contact the administrator.</p>
+            </div>
             {% endfor %}
           </div>
           {% if form.plan.errors %}<small class="text-danger d-block">{{ form.plan.errors.0 }}</small>{% endif %}
@@ -212,7 +216,7 @@
     data() {
       return {
         subdomainSlug: '',
-        selectedPlanId: {{ preselected_plan_id|default:plans.0.id|default:'null' }}
+        selectedPlanId: {{ preselected_plan_id|default:'null' }}
       };
     },
     methods: {

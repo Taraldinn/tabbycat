@@ -26,14 +26,19 @@ class RegisterTenantView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['plans'] = Plan.objects.filter(is_active=True).order_by('display_order', 'price_bdt')
-        context['base_domain'] = getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
-        # Preselect plan if query param provided
+        plans = Plan.objects.filter(is_active=True).order_by('display_order', 'price_bdt')
+        context['plans'] = plans
+        context['base_domain'] = getattr(settings, 'TABBYCAT_BASE_DOMAIN', 'shebafi.xyz')
+        
+        # Preselect plan if query param provided or default to first active plan
         plan_slug = self.request.GET.get('plan')
+        preselected_plan = None
         if plan_slug:
-            plan = Plan.objects.filter(slug=plan_slug, is_active=True).first()
-            if plan:
-                context['preselected_plan_id'] = plan.id
+            preselected_plan = plans.filter(slug=plan_slug).first()
+        if not preselected_plan:
+            preselected_plan = plans.first()
+
+        context['preselected_plan_id'] = preselected_plan.id if preselected_plan else None
         return context
 
     def form_valid(self, form):

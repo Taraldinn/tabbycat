@@ -88,7 +88,7 @@ urlpatterns = [
         include('tournaments.urls')),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or not getattr(settings, 'USING_NGINX', False):
     from django.views.static import serve
     urlpatterns.extend([
         path('robots.txt', serve, {'document_root': settings.STATIC_ROOT, 'path': 'root/robots.txt'}),
