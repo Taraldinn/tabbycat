@@ -32,6 +32,28 @@ class TenantMiddlewareAndRoutingTestCase(TestCase):
         self.middleware(request)
         self.assertEqual(request.tenant, self.tenant)
 
+    def test_shebafi_subdomain_resolution_via_middleware(self):
+        request = self.factory.get('/', HTTP_HOST='cuet-ds.shebafi.xyz')
+        self.middleware(request)
+        self.assertEqual(request.tenant, self.tenant)
+
+    def test_shebafi_base_domain_is_landing(self):
+        request = self.factory.get('/', HTTP_HOST='shebafi.xyz')
+        self.middleware(request)
+        self.assertIsNone(request.tenant)
+        self.assertFalse(request.is_platform_admin)
+
+    def test_shebafi_www_redirects_with_path(self):
+        request = self.factory.get('/robots.txt', HTTP_HOST='www.shebafi.xyz')
+        response = self.middleware(request)
+        self.assertEqual(response.status_code, 301)
+        self.assertTrue(response.url.endswith('shebafi.xyz/robots.txt'))
+
+    def test_shebafi_admin_subdomain(self):
+        request = self.factory.get('/', HTTP_HOST='admin.shebafi.xyz')
+        self.middleware(request)
+        self.assertTrue(request.is_platform_admin)
+
     def test_custom_domain_resolution_via_middleware(self):
         request = self.factory.get('/', HTTP_HOST='cuetdebating.org')
         self.middleware(request)

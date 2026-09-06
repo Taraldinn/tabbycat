@@ -43,9 +43,9 @@ services:
       - key: MULTI_TENANT_MODE
         value: true
       - key: TABBYCAT_BASE_DOMAIN
-        sync: false  # Set in Render dashboard: e.g. tabbycatbd.com
+        value: shebafi.xyz
       - key: TENANT_BASE_DOMAIN
-        sync: false  # Set in Render dashboard: e.g. tabbycatbd.com
+        value: shebafi.xyz
 
       # Sentry (set your own DSN or leave DISABLE_SENTRY=true)
       - key: DISABLE_SENTRY
@@ -106,9 +106,9 @@ services:
       - key: MULTI_TENANT_MODE
         value: true
       - key: TABBYCAT_BASE_DOMAIN
-        sync: false
+        value: shebafi.xyz
       - key: TENANT_BASE_DOMAIN
-        sync: false
+        value: shebafi.xyz
       - key: DISABLE_SENTRY
         value: true
       - key: TIME_ZONE
@@ -162,6 +162,6 @@ services:
       - key: MULTI_TENANT_MODE
         value: true
       - key: TABBYCAT_BASE_DOMAIN
-        sync: false
+        value: shebafi.xyz
       - key: DISABLE_SENTRY
         value: true

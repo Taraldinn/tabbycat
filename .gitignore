@@ -14,7 +14,8 @@ __pycache__/
 
 # Compilation & Static Assets
 tabbycat/staticfiles/
-tabbycat/static/css/
+tabbycat/static/css/*
+!tabbycat/static/css/modern_compact_ui.css
 tabbycat/static/js/
 tabbycat/static/jsi18n/
 tabbycat/static/vue/

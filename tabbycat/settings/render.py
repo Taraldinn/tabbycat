@@ -31,27 +31,35 @@ if RENDER_EXTERNAL_HOSTNAME:
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+# Prevent 500 crashes if an unhashed/missing static file is requested
+WHITENOISE_MANIFEST_STRICT = False
+
 # ==============================================================================
 # Multi-tenancy
 # ==============================================================================
 
 MULTI_TENANT_MODE = os.environ.get('MULTI_TENANT_MODE', 'true').lower() in ('true', '1', 'yes')
-TABBYCAT_BASE_DOMAIN = os.environ.get('TABBYCAT_BASE_DOMAIN', 'tabbycatbd.com')
+TABBYCAT_BASE_DOMAIN = os.environ.get('TABBYCAT_BASE_DOMAIN', 'shebafi.xyz')
 TENANT_BASE_DOMAIN = os.environ.get('TENANT_BASE_DOMAIN', TABBYCAT_BASE_DOMAIN)
 
 CSRF_TRUSTED_ORIGINS = []
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
-if TABBYCAT_BASE_DOMAIN:
-    CSRF_TRUSTED_ORIGINS.extend([
-        f"https://{TABBYCAT_BASE_DOMAIN}",
-        f"https://*.{TABBYCAT_BASE_DOMAIN}",
-    ])
-if TENANT_BASE_DOMAIN and TENANT_BASE_DOMAIN != TABBYCAT_BASE_DOMAIN:
-    CSRF_TRUSTED_ORIGINS.extend([
-        f"https://{TENANT_BASE_DOMAIN}",
-        f"https://*.{TENANT_BASE_DOMAIN}",
-    ])
+
+all_known_domains = {
+    TABBYCAT_BASE_DOMAIN,
+    TENANT_BASE_DOMAIN,
+    'shebafi.xyz',
+    'tabbycatbd.com',
+}
+for domain in all_known_domains:
+    if domain:
+        CSRF_TRUSTED_ORIGINS.extend([
+            f"https://{domain}",
+            f"https://*.{domain}",
+            f"https://www.{domain}",
+        ])
+
 if os.environ.get('CSRF_TRUSTED_ORIGINS'):
     CSRF_TRUSTED_ORIGINS.extend(
         origin.strip() for origin in os.environ['CSRF_TRUSTED_ORIGINS'].split(',') if origin.strip()
@@ -105,8 +113,8 @@ if REDIS_URL:
 # ==============================================================================
 
 if os.environ.get('EMAIL_HOST', ''):
-    SERVER_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@tabbycatbd.com')
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@tabbycatbd.com')
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'noreply@{TABBYCAT_BASE_DOMAIN}')
+    SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
     EMAIL_HOST = os.environ['EMAIL_HOST']
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
@@ -114,8 +122,8 @@ if os.environ.get('EMAIL_HOST', ''):
     EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
 
 elif os.environ.get('SENDGRID_API_KEY', ''):
-    SERVER_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@tabbycatbd.com')
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@tabbycatbd.com')
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'noreply@{TABBYCAT_BASE_DOMAIN}')
+    SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
     EMAIL_HOST = 'smtp.sendgrid.net'
     EMAIL_HOST_USER = 'apikey'
     EMAIL_HOST_PASSWORD = os.environ['SENDGRID_API_KEY']
