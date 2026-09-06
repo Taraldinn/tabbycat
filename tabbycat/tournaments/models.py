@@ -1,10 +1,12 @@
 import logging
+from datetime import timedelta
 from typing import Union
 
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Count, F, Prefetch, Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
@@ -31,6 +33,13 @@ def validate_tournament_slug(value):
             "another one."))
 
 
+TOURNAMENT_LIFETIME_DAYS = 183  # ~6 months
+
+
+def default_expires_at():
+    return timezone.now() + timedelta(days=TOURNAMENT_LIFETIME_DAYS)
+
+
 class Tournament(models.Model):
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE,
         null=True, blank=True, verbose_name=_("tenant"))
@@ -47,10 +56,20 @@ class Tournament(models.Model):
         verbose_name=_("slug"),
         help_text=_("The sub-URL of the tournament, cannot have spaces, e.g. \"australs2016\""))
     active = models.BooleanField(verbose_name=_("active"), default=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True,
+        verbose_name=_("created at"))
+    expires_at = models.DateTimeField(default=default_expires_at, null=True, blank=True,
+        verbose_name=_("expires at"),
+        help_text=_("Tournament is automatically deactivated after this date (default: 6 months after creation)."))
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['tenant', 'slug'], name='unique_tenant_slug')
+            models.UniqueConstraint(fields=['tenant', 'slug'], name='unique_tenant_slug'),
+            models.UniqueConstraint(
+                fields=['tenant', 'name'],
+                condition=models.Q(tenant__isnull=False),
+                name='unique_tenant_tournament_name',
+            ),
         ]
         verbose_name = _('tournament')
         verbose_name_plural = _('tournaments')

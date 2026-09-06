@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.forms import CharField, ChoiceField, DateTimeInput, Form, HiddenInput, ModelChoiceField, ModelForm
+from django.forms import CharField, ChoiceField, DateTimeInput, Form, HiddenInput, ModelChoiceField, ModelForm, ValidationError as forms_validation_error
 from django.forms.fields import IntegerField, NumberInput
 from django.forms.models import ModelChoiceIterator
 from django.utils.html import escape
@@ -36,6 +36,36 @@ class TournamentStartForm(ModelForm):
         required=False,
         label=_("Number of teams in the open break"),
         help_text=_("Leave blank if there are no break rounds."))
+
+    def __init__(self, *args, tenant=None, **kwargs):
+        self._tenant = tenant
+        super().__init__(*args, **kwargs)
+
+    def validate_name(self, value):
+        """Block duplicate tournament names within the same tenant."""
+        if self._tenant and value:
+            if Tournament.objects.filter(tenant=self._tenant, name__iexact=value).exists():
+                raise forms_validation_error(
+                    _("A tournament named \"%(name)s\" already exists for this organisation. "
+                      "Please choose a different name.") % {'name': value}
+                )
+        return value
+
+    def validate_slug(self, value):
+        """Block duplicate tournament slugs within the same tenant."""
+        if self._tenant and value:
+            if Tournament.objects.filter(tenant=self._tenant, slug=value).exists():
+                raise forms_validation_error(
+                    _("The URL slug \"%(slug)s\" is already in use by another tournament "
+                      "in this organisation. Please choose a different slug.") % {'slug': value}
+                )
+        return value
+
+    def clean_name(self):
+        return self.validate_name(self.cleaned_data.get('name', ''))
+
+    def clean_slug(self):
+        return self.validate_slug(self.cleaned_data.get('slug', ''))
 
     @staticmethod
     def add_default_feedback_questions(tournament):

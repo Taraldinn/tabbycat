@@ -11,7 +11,7 @@ services:
     plan: free  # Upgrade to 'starter' for production
     region: oregon
     buildCommand: "./bin/render-compile.sh"
-    startCommand: "npm run render-serve"
+    startCommand: "cd tabbycat && python run-asgi.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -85,7 +85,7 @@ services:
     plan: free  # Upgrade to 'starter' for production
     region: oregon
     buildCommand: "./bin/render-compile.sh"
-    startCommand: "python manage.py runworker notifications adjallocation venues"
+    startCommand: "cd tabbycat && python manage.py runworker notifications adjallocation venues"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -141,3 +141,31 @@ services:
     plan: free  # Upgrade to 'starter' for persistent Redis in production
     maxmemoryPolicy: allkeys-lru
 
+  # Daily cron: auto-deactivate tournaments that have passed their 6-month expiry
+  - type: cron
+    name: tabbycat_expire_tournaments
+    env: python
+    region: oregon
+    schedule: "0 1 * * *"  # Every day at 01:00 UTC
+    buildCommand: "./bin/render-compile.sh"
+    startCommand: "cd tabbycat && python manage.py deactivate_expired_tournaments"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tabbycat_database
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        fromService:
+          type: web
+          name: tabbycat_web
+          envVarKey: DJANGO_SECRET_KEY
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ON_RENDER
+        value: true
+      - key: MULTI_TENANT_MODE
+        value: true
+      - key: TABBYCAT_BASE_DOMAIN
+        sync: false
+      - key: DISABLE_SENTRY
+        value: true
