@@ -35,6 +35,59 @@ class ModelAdmin(admin.ModelAdmin):
             change_message=self.add_ip_to_message(request, ''),
         )
 
+    def has_module_permission(self, request):
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            return True
+        return super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            return True
+        return super().has_view_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            return True
+        return super().has_change_permission(request, obj)
+
+    def has_add_permission(self, request):
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            return True
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            return True
+        return super().has_delete_permission(request, obj)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser or getattr(request, 'is_platform_admin', False):
+            return qs
+
+        # Determine user's tenant(s)
+        tenant = getattr(request, 'tenant', None)
+        user_tenants = list(request.user.tenant_memberships.values_list('tenant_id', flat=True)) if hasattr(request.user, 'tenant_memberships') else []
+        if tenant and tenant.id not in user_tenants:
+            user_tenants.append(tenant.id)
+
+        if not user_tenants:
+            return qs
+
+        model = self.model
+        field_names = [f.name for f in model._meta.get_fields()]
+
+        if 'tenant' in field_names:
+            return qs.filter(tenant_id__in=user_tenants)
+        elif 'tournament' in field_names:
+            return qs.filter(tournament__tenant_id__in=user_tenants)
+        elif 'round' in field_names:
+            return qs.filter(round__tournament__tenant_id__in=user_tenants)
+        elif 'debate' in field_names:
+            return qs.filter(debate__round__tournament__tenant_id__in=user_tenants)
+
+        return qs
+
 
 class TabbycatModelAdminFieldsMixin:
 

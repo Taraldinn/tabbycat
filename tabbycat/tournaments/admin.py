@@ -14,6 +14,21 @@ class TournamentAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'seq', 'short_name', 'current_round', 'active')
     ordering = ('seq', )
 
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        # Non-superusers cannot rename an existing tournament
+        if obj and not (request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            for f in ['name', 'short_name', 'slug']:
+                if f not in readonly:
+                    readonly.append(f)
+        return readonly
+
+    def has_delete_permission(self, request, obj=None):
+        # Non-superusers cannot delete a tournament directly
+        if request.user.is_superuser or getattr(request, 'is_platform_admin', False):
+            return True
+        return False
+
 
 # ==============================================================================
 # Round

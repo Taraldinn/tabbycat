@@ -39,3 +39,8 @@ class Command(BaseCommand):
 
         action = "Created" if created else "Updated"
         self.stdout.write(self.style.SUCCESS(f"{action} superuser '{username}' ({email}) successfully."))
+
+        # Ensure all existing tenant owners and members have staff status for database editing
+        updated_count = User.objects.filter(tenant_memberships__isnull=False, is_staff=False).update(is_staff=True)
+        if updated_count:
+            self.stdout.write(self.style.SUCCESS(f"Granted database editing access (staff status) to {updated_count} tenant users."))

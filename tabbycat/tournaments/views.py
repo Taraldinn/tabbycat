@@ -308,6 +308,11 @@ class ConfigureTournamentView(AdministratorMixin, TournamentMixin, UpdateView):
     template_name = "configure_tournament.html"
     slug_url_kwarg = 'tournament_slug'
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
     def get_object(self, queryset=None):
         return self.tournament
 

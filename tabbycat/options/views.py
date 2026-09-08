@@ -39,6 +39,9 @@ class TournamentConfigIndexView(AdministratorMixin, TournamentMixin, TemplateVie
 
     def get_context_data(self, **kwargs):
         kwargs["presets"] = self.get_preset_options()
+        kwargs["can_change_format"] = bool(
+            self.request.user.is_superuser or getattr(self.request, 'is_platform_admin', False)
+        )
         return super().get_context_data(**kwargs)
 
 
@@ -90,6 +93,13 @@ class SetPresetPreferencesView(AdministratorMixin, LogActionMixin, TournamentMix
     edit_permission = Permission.EDIT_SETTINGS
 
     action_log_type = ActionLogEntry.ActionType.OPTIONS_EDIT
+
+    def dispatch(self, request, *args, **kwargs):
+        from utils.misc import redirect_tournament
+        if not (request.user.is_superuser or getattr(request, 'is_platform_admin', False)):
+            messages.error(request, _("Tournament format/type options cannot be changed after tournament creation. Please contact platform support if you need assistance."))
+            return redirect_tournament('options-tournament-index', self.tournament)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_page_title(self):
         return _("Apply Preset: %s") % self.get_selected_preset().name

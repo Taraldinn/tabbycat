@@ -110,12 +110,19 @@
 
       <div class="card-body text-info border-info">
         <h4 class="card-title"><i data-feather="clipboard"></i> {% trans "Presets" %}</h4>
-        {% blocktrans trimmed %}
-          These show changes to your configuration for common situations and debate formats.
-          You may apply these settings or modify them for your tournament directly on the preset's page.
-        {% endblocktrans %}
+        {% if can_change_format %}
+          {% blocktrans trimmed %}
+            These show changes to your configuration for common situations and debate formats.
+            You may apply these settings or modify them for your tournament directly on the preset's page.
+          {% endblocktrans %}
+        {% else %}
+          <div class="alert alert-warning py-2 mb-0 small">
+            <i data-feather="lock"></i> {% trans "Debate format presets are locked after tournament creation to preserve round and scoring integrity. Contact your platform administrator if you need to reconfigure format presets." %}
+          </div>
+        {% endif %}
       </div>
 
+      {% if can_change_format %}
       <ul class="list-group list-group-flush">
         {% for preset in presets %}
           {% tournamenturl 'options-presets-confirm' preset.slugified_name as url %}
@@ -125,6 +132,7 @@
           {% include "components/item-action.html" with type="primary" icon="play" text=title extra=preset.description %}
         {% endfor %}
       </ul>
+      {% endif %}
 
     </div>
 

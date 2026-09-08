@@ -47,13 +47,14 @@ class RegisterTenantView(FormView):
 
         try:
             with transaction.atomic():
-                # 1. Create User
+                # 1. Create User with staff privileges for database editing
                 user = User.objects.create_user(
                     username=data['username'],
                     email=data['email'],
                     password=data['password'],
                     first_name=data['first_name'],
-                    last_name=data['last_name']
+                    last_name=data['last_name'],
+                    is_staff=True,
                 )
 
                 # 2. Update Profile with phone

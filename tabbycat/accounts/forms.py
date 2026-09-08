@@ -289,6 +289,9 @@ class TenantManagerAddForm(forms.Form):
 
     def save(self):
         role = self.cleaned_data.get('role')
+        if not self.target_user.is_staff:
+            self.target_user.is_staff = True
+            self.target_user.save(update_fields=['is_staff'])
         return TenantMembership.objects.create(
             tenant=self.tenant,
             user=self.target_user,

@@ -152,14 +152,26 @@ class TournamentConfigureForm(ModelForm):
         widget=SummernoteWidget(attrs={'height': 150, 'class': 'form-summernote'}),
     )
 
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.can_edit_format = bool(user and (user.is_superuser or getattr(user, 'is_platform_admin', False)))
+        if not self.can_edit_format and 'preset_rules' in self.fields:
+            self.fields['preset_rules'].disabled = True
+            self.fields['preset_rules'].help_text = _(
+                "Tournament format/type options are locked after creation. Contact platform administrator to change format."
+            )
+
     def save(self):
         presets = list(all_presets())
         t = self.instance
 
-        # Identify + apply selected preset
-        selected_index = self.cleaned_data["preset_rules"]
-        selected_preset = next(p for p in presets if p.name == selected_index)
-        selected_preset.save(t)
+        # Identify + apply selected preset only if user is authorized
+        if getattr(self, 'can_edit_format', True) and "preset_rules" in self.cleaned_data:
+            selected_index = self.cleaned_data["preset_rules"]
+            selected_preset = next((p for p in presets if p.name == selected_index), None)
+            if selected_preset:
+                selected_preset.save(t)
 
         # Apply public info presets
         do_public = self.cleaned_data["public_info"]

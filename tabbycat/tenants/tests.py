@@ -215,6 +215,73 @@ class TenantIsolationViewAndAPITestCase(TestCase):
             with self.assertRaises(Http404):
                 _ = view3.tournament
 
+    def test_tournament_name_readonly_for_tenant_user_in_admin(self):
+        from tournaments.admin import TournamentAdmin
+        from django.contrib.admin.sites import AdminSite
+
+        admin_instance = TournamentAdmin(Tournament, AdminSite())
+        
+        # Non-superuser tenant owner
+        req = self.factory.get('/admin/tournaments/tournament/1/change/')
+        req.user = self.user1
+        req.user.is_staff = True
+        req.user.is_superuser = False
+        readonly_fields = admin_instance.get_readonly_fields(req, obj=self.tournament1)
+        self.assertIn('name', readonly_fields)
+        self.assertIn('short_name', readonly_fields)
+        self.assertIn('slug', readonly_fields)
+
+        # Superuser (SaaS Admin) can edit name
+        superuser = User.objects.create_superuser('admin_tester', 'admin@example.com', 'Pass123!')
+        req_admin = self.factory.get('/admin/tournaments/tournament/1/change/')
+        req_admin.user = superuser
+        readonly_super = admin_instance.get_readonly_fields(req_admin, obj=self.tournament1)
+        self.assertNotIn('name', readonly_super)
+
+    def test_tournament_format_option_restricted_for_tenant_user(self):
+        from tournaments.forms import TournamentConfigureForm
+        from options.views import SetPresetPreferencesView
+
+        # TournamentConfigureForm disables preset_rules for tenant user
+        form = TournamentConfigureForm(instance=self.tournament1, user=self.user1)
+        self.assertTrue(form.fields['preset_rules'].disabled)
+
+        # SetPresetPreferencesView redirects with error for tenant user
+        view = SetPresetPreferencesView()
+        req = self.factory.post(f'/{self.tournament1.slug}/admin/options/presets/bp/confirm/')
+        req.user = self.user1
+        req.user.is_staff = True
+        req.user.is_superuser = False
+        req.tenant = self.tenant1
+        
+        # Add messages middleware support for request
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        setattr(req, 'session', 'session')
+        messages = FallbackStorage(req)
+        setattr(req, '_messages', messages)
+
+        view.request = req
+        view.kwargs = {'tournament_slug': self.tournament1.slug, 'preset_name': 'bp'}
+        response = view.dispatch(req, tournament_slug=self.tournament1.slug, preset_name='bp')
+        self.assertEqual(response.status_code, 302)
+
+    def test_tenant_staff_user_has_database_editing_permissions(self):
+        from participants.models import Team
+        from participants.admin import TeamAdmin
+        from django.contrib.admin.sites import AdminSite
+
+        team_admin = TeamAdmin(Team, AdminSite())
+        req = self.factory.get('/admin/participants/team/')
+        req.user = self.user1
+        req.user.is_staff = True
+        req.user.is_superuser = False
+        req.tenant = self.tenant1
+
+        self.assertTrue(team_admin.has_module_permission(req))
+        self.assertTrue(team_admin.has_view_permission(req))
+        self.assertTrue(team_admin.has_change_permission(req))
+        self.assertTrue(team_admin.has_add_permission(req))
+
 
 class RenderSettingsTestCase(TestCase):
     def test_multi_tenant_parsing(self):
