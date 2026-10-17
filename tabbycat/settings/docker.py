@@ -47,8 +47,14 @@ if os.environ.get('CSRF_TRUSTED_ORIGINS'):
         origin.strip() for origin in os.environ['CSRF_TRUSTED_ORIGINS'].split(',') if origin.strip()
     )
 
+# Sessions: Use cached_db so sessions are stored in Postgres and cached in Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
 # Redis / Caching
 REDIS_URL = os.environ.get('REDIS_URL')
+if not REDIS_URL and os.environ.get('REDIS_HOST'):
+    REDIS_URL = f"redis://{os.environ['REDIS_HOST']}:{os.environ.get('REDIS_PORT', 6379)}/1"
+
 if REDIS_URL:
     USE_REDIS = True
     CACHES = {
@@ -57,8 +63,8 @@ if REDIS_URL:
             "LOCATION": REDIS_URL,
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "SOCKET_CONNECT_TIMEOUT": 5,
-                "SOCKET_TIMEOUT": 60,
+                "SOCKET_CONNECT_TIMEOUT": 3,
+                "SOCKET_TIMEOUT": 5,
                 "IGNORE_EXCEPTIONS": True,
             },
         },
@@ -79,8 +85,9 @@ elif bool(int(os.environ.get('DOCKER_REDIS', 0))):
             "LOCATION": "redis://redis:6379/1",
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "SOCKET_CONNECT_TIMEOUT": 5,
-                "SOCKET_TIMEOUT": 60,
+                "SOCKET_CONNECT_TIMEOUT": 3,
+                "SOCKET_TIMEOUT": 5,
+                "IGNORE_EXCEPTIONS": True,
             },
         },
     }
@@ -92,4 +99,15 @@ elif bool(int(os.environ.get('DOCKER_REDIS', 0))):
                 "group_expiry": 10800,
             },
         },
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
     }
