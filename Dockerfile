@@ -25,8 +25,11 @@ RUN nvm install && nvm use
 RUN git config --global url."https://".insteadOf git://
 
 # Install our node/python requirements
-RUN pip install pipenv
-RUN pipenv install --system --deploy
+RUN if [ -f "requirements.txt" ]; then \
+        pip install --no-cache-dir -r requirements.txt; \
+    else \
+        pip install pipenv && pipenv install --system --deploy; \
+    fi
 RUN npm ci --only=production
 
 # Compile all the static files

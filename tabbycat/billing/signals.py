@@ -1,7 +1,14 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from dateutil.relativedelta import relativedelta
+try:
+    from dateutil.relativedelta import relativedelta
+except ImportError:
+    from datetime import timedelta
+
+    def relativedelta(months=0, years=0):
+        days = months * 30 + years * 365
+        return timedelta(days=days)
 
 from .models import Payment, Subscription
 
