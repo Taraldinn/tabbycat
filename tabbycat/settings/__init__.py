@@ -5,10 +5,12 @@ import sys
 from split_settings.tools import optional, include
 
 
+is_debug = bool(int(os.environ.get('DEBUG', 0)))
+log_level = logging.DEBUG if is_debug else logging.INFO
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(log_level)
 ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
+ch.setLevel(log_level)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 root.addHandler(ch)
