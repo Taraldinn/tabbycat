@@ -35,3 +35,6 @@ RUN npm ci --only=production
 # Compile all the static files
 RUN npm run build
 RUN python ./tabbycat/manage.py collectstatic --noinput -v 0
+
+EXPOSE 8000
+CMD ["./bin/docker-run-honcho.sh"]

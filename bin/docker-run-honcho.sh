@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #   Shorthand to migrate and run honcho in docker
 
+# If DB_HOST is set, wait for DB port
+if [ -n "$DB_HOST" ]; then
+    ./bin/docker-wait.sh --timeout=30 "$DB_HOST:${DB_PORT:-5432}" -- echo "Database is ready"
+fi
+
 cd tabbycat
 
 # Migrate (can't do it during build; no db connnection)
